@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест Альфа Эквайринг</title>
+    <style>
+        body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; }
+        .card { border: 1px solid #ddd; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        button { background: #ef3124; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 4px; }
+        button:hover { background: #d12015; }
+        pre { background: #f4f4f4; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Тестирование API Альфа-Банка</h1>
+    
+    <div class="card">
+        <h3>Сценарий 1: Инициализация оплаты</h3>
+        <p>Сумма: 1.00 BYN</p>
+        <button onclick="runTest('init')">Запустить тест</button>
+    </div>
+
+    <div class="card">
+        <h3>Результат:</h3>
+        <pre id="result">Здесь будет ответ от сервера...</pre>
+    </div>
+
+    <script>
+        async function runTest(scenario) {
+            const resultBox = document.getElementById('result');
+            resultBox.innerText = "Загрузка...";
+            
+            try {
+                // Обращаемся к нашей серверной функции на Vercel
+                const response = await fetch('/api/test-alfa', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ scenario: scenario })
+                });
+                const data = await response.json();
+                resultBox.innerText = JSON.stringify(data, null, 2);
+            } catch (error) {
+                resultBox.innerText = "Ошибка: " + error.message;
+            }
+        }
+    </script>
+</body>
+</html>
