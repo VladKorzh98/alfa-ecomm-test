@@ -368,13 +368,11 @@
 
     <header>
         <div class="logo-container">
-    <svg class="logo-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-        <!-- Буква А -->
-        <path d="M 50 5 L 15 90 L 28 90 L 35 70 L 65 70 L 72 90 L 85 90 Z M 42 62 L 50 40 L 58 62 Z" fill="#EF3124"/>
-        <!-- Подчеркивание -->
-        <rect x="15" y="92" width="70" height="5" fill="#EF3124"/>
-    </svg>
-</div>
+            <svg class="logo-svg" viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
+                <path d="M50 10 L20 95 L33 95 L40 75 L60 75 L67 95 L80 95 Z M45 67 L50 50 L55 67 Z" fill="#EF3124"/>
+                <rect x="20" y="105" width="60" height="6" fill="#EF3124"/>
+            </svg>
+        </div>
         <div class="brand-name">API Testing</div>
     </header>
 
@@ -397,8 +395,8 @@
             <div class="breadcrumb"><span onclick="showScreen('screen-select')">← Назад</span></div>
             <h1>Регистрация заказа</h1>
             <p>Выберите тип регистрации заказа:</p>
-            <button class="btn" onclick="selectEcomType('no-binding')">Без привязки</button>
-            <button class="btn btn-secondary" onclick="selectEcomType('with-binding')">С привязкой</button>
+            <button class="btn" onclick="selectEcomType('no-binding')">Без привязки карты</button>
+            <button class="btn btn-secondary" onclick="selectEcomType('with-binding')">С привязкой карты</button>
         </div>
 
         <div id="screen-ecom-stage" class="screen">
@@ -851,10 +849,6 @@
                 if (errorDescBlock) errorDescBlock.style.display = 'none';
             }
             
-            // Показываем кнопки если:
-            // 1. Двухстадийный платеж
-            // 2. Статус 1 (Подтвержден) ИЛИ 8 (Частичное завершение)
-            // 3. Есть доступная сумма для операций
             var actionButtons = document.getElementById('action-buttons');
             if (testConfig.stageType === 'two-stage' && (status === '1' || status === '8')) {
                 var preAuth = parseFloat(testConfig.preAuthAmount) || 0;
@@ -996,7 +990,6 @@
                 var data = await response.json();
                 
                 if (!response.ok || data.error) {
-                    // Специфическая обработка errorCode 5
                     if (data.errorCode === '5' || data.errorCode === 5) {
                         throw new Error('Убедитесь, что используете тестовую карту процессинга. Повторите на новом заказе');
                     }
