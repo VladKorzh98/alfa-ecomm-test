@@ -57,7 +57,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       orderId: bankData.orderId,           // Уникальный ID от банка
-      orderNumber: bankData.orderNumber,   // Номер заказа от банка
+      orderNumber: bankData.orderNumber,   // Номер заказа (тот же что мы отправили)
       orderStatus: bankData.orderStatus,
       amount: bankData.amount,
       currency: bankData.currency,
