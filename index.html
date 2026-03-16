@@ -674,7 +674,7 @@
         }
 
         function displayOrderStatus(data) {
-            var status = data.orderStatus;
+            var status = String(data.orderStatus);  // ИСПРАВЛЕНО: преобразуем к строке!
             var statusInfo = statusMap[status] || { text: 'Неизвестный статус', class: 'status-0' };
             
             var statusBox = document.getElementById('status-box');
@@ -722,18 +722,14 @@
                 document.getElementById('error-description-block').style.display = 'none';
             }
             
-            // ПОКАЗЫВАЕМ кнопки для статуса 1 (Подтвержден) + двухстадийный
-            console.log('Checking buttons visibility:');
-            console.log('- stageType:', testConfig.stageType);
-            console.log('- status:', status);
-            console.log('- show buttons:', testConfig.stageType === 'two-stage' && status === '1');
+            console.log('Checking buttons - stageType:', testConfig.stageType, 'status:', status);
             
             if (testConfig.stageType === 'two-stage' && status === '1') {
                 document.getElementById('action-buttons').style.display = 'block';
-                console.log('Buttons SHOWN!');
+                console.log('✅ Buttons SHOWN!');
             } else {
                 document.getElementById('action-buttons').style.display = 'none';
-                console.log('Buttons HIDDEN');
+                console.log('❌ Buttons HIDDEN - stageType:', testConfig.stageType, 'status:', status);
             }
         }
 
