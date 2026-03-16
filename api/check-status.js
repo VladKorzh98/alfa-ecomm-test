@@ -48,25 +48,21 @@ export default async function handler(req, res) {
     console.log(JSON.stringify(bankData, null, 2));
     console.log('====================');
 
-    // ПРОВЕРКА ОШИБКИ: errorCode=0 означает успех!
     if (bankData.errorCode && bankData.errorCode !== '0' && bankData.errorCode !== 0) {
       console.error('Bank error:', bankData.errorMessage);
       throw new Error(bankData.errorMessage || 'Ошибка от Альфа-Банка');
     }
 
-    // Проверяем наличие orderStatus
-    if (bankData.orderStatus === undefined || bankData.orderStatus === null) {
-      console.warn('Warning: orderStatus is missing in response');
-    }
-
     console.log('Success! orderStatus:', bankData.orderStatus);
 
     return res.status(200).json({
+      orderId: bankData.orderId,
       orderStatus: bankData.orderStatus,
       orderNumber: bankData.orderNumber,
       amount: bankData.amount,
       currency: bankData.currency,
       authCode: bankData.authCode || null,
+      maskedPan: bankData.maskedPan || null,
       cardAuthInfo: {
         cardholderName: bankData.cardAuthInfo?.cardholderName || null,
         panLast: bankData.cardAuthInfo?.panLast || null,
