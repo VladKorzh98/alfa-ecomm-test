@@ -10,13 +10,13 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { orderId } = req.body;
+  const { orderId, orderNumber } = req.body;
 
   console.log('=== CHECK STATUS API START ===');
-  console.log('orderId from request:', orderId);
+  console.log('orderId:', orderId);
+  console.log('orderNumber:', orderNumber);
 
   if (!orderId) {
-    console.error('Missing orderId');
     return res.status(400).json({
       error: 'missing_order_id',
       message: 'Не указан orderId'
@@ -27,8 +27,6 @@ export default async function handler(req, res) {
   params.append('userName', process.env.ALFA_USERNAME || 'ABB_3-api');
   params.append('password', process.env.ALFA_PASSWORD || 'ABB_3*?1');
   params.append('orderId', orderId);
-
-  console.log('Sending request to Alfa Bank...');
 
   try {
     const bankResponse = await fetch('https://abby.rbsuat.com/payment/rest/getOrderStatusExtended.do', {
@@ -44,20 +42,17 @@ export default async function handler(req, res) {
     const bankData = await bankResponse.json();
     console.log('=== BANK RESPONSE ===');
     console.log(JSON.stringify(bankData, null, 2));
-    console.log('====================');
 
     if (bankData.errorCode && bankData.errorCode !== '0' && bankData.errorCode !== 0) {
-      console.error('Bank error:', bankData.errorMessage);
       throw new Error(bankData.errorMessage || 'Ошибка от Альфа-Банка');
     }
 
-    console.log('Success! orderStatus:', bankData.orderStatus);
-    console.log('Bank orderId:', bankData.orderId);
-    console.log('Bank orderNumber:', bankData.orderNumber);
-
+    // ВОЗВРАЩАЕМ:
+    // - orderId: от банка
+    // - orderNumber: НАШ (который передали в запросе), НЕ от банка!
     return res.status(200).json({
-      orderId: bankData.orderId,           // Уникальный ID от банка
-      orderNumber: bankData.orderNumber,   // Номер заказа (тот же что мы отправили)
+      orderId: bankData.orderId,
+      orderNumber: orderNumber,  // Используем НАШ orderNumber!
       orderStatus: bankData.orderStatus,
       amount: bankData.amount,
       currency: bankData.currency,
@@ -67,17 +62,12 @@ export default async function handler(req, res) {
         cardholderName: bankData.cardAuthInfo?.cardholderName || null,
         panLast: bankData.cardAuthInfo?.panLast || null,
         expiration: bankData.cardAuthInfo?.expiration || null
-      },
-      orderDescription: bankData.orderDescription || null,
-      ipAddress: bankData.ipAddress || null,
-      date: bankData.date || null
+      }
     });
 
   } catch (error) {
     console.error('=== CATCH ERROR ===');
     console.error(error);
-    console.error('Error message:', error.message);
-    console.error('==================');
     
     return res.status(500).json({
       error: 'status_check_failed',
