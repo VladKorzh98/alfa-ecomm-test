@@ -207,6 +207,7 @@
             border-bottom: 1px solid #dee2e6;
             display: flex;
             justify-content: space-between;
+            align-items: center;
         }
 
         .result-row:last-child {
@@ -221,6 +222,32 @@
         .result-value {
             color: #666;
             text-align: right;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .copy-btn {
+            background: none;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 4px 8px;
+            cursor: pointer;
+            font-size: 12px;
+            color: #666;
+            transition: all 0.2s;
+        }
+
+        .copy-btn:hover {
+            background: #ef3124;
+            color: white;
+            border-color: #ef3124;
+        }
+
+        .copy-btn.copied {
+            background: #28a745;
+            color: white;
+            border-color: #28a745;
         }
 
         .status-badge {
@@ -245,6 +272,31 @@
             font-family: 'Courier New', monospace;
             font-size: 18px;
             letter-spacing: 2px;
+            font-weight: bold;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #28a745;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 5px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
         }
     </style>
 </head>
@@ -356,6 +408,13 @@
                         <span class="result-value"><span class="status-badge" id="st-status"></span></span>
                     </div>
                     <div class="result-row">
+                        <span class="result-label">Уникальный номер заказа:</span>
+                        <span class="result-value">
+                            <span id="st-order-id"></span>
+                            <button class="copy-btn" onclick="copyToClipboard('st-order-id', this)">Копировать</button>
+                        </span>
+                    </div>
+                    <div class="result-row">
                         <span class="result-label">Номер заказа:</span>
                         <span class="result-value" id="st-order-number"></span>
                     </div>
@@ -371,10 +430,6 @@
                         <span class="result-label">Карта:</span>
                         <span class="result-value card-mask" id="st-card"></span>
                     </div>
-                    <div class="result-row" id="row-expiry" style="display:none">
-                        <span class="result-label">Срок действия:</span>
-                        <span class="result-value" id="st-expiry"></span>
-                    </div>
                     <div class="result-row" id="row-auth" style="display:none">
                         <span class="result-label">Код авторизации:</span>
                         <span class="result-value" id="st-auth"></span>
@@ -386,6 +441,9 @@
         </div>
 
     </div>
+
+    <!-- Toast уведомление -->
+    <div id="toast" class="toast">Скопировано!</div>
 
     <!-- Модальное окно ошибки -->
     <div id="errorModal" class="modal" onclick="this.style.display='none'">
@@ -434,6 +492,54 @@
             checkReturnUrl();
         });
 
+        // Копирование в буфер обмена
+        function copyToClipboard(elementId, btn) {
+            var element = document.getElementById(elementId);
+            var text = element.innerText;
+            
+            navigator.clipboard.writeText(text).then(function() {
+                // Показываем toast
+                showToast();
+                
+                // Меняем текст кнопки
+                var originalText = btn.innerText;
+                btn.innerText = 'Скопировано!';
+                btn.classList.add('copied');
+                
+                setTimeout(function() {
+                    btn.innerText = originalText;
+                    btn.classList.remove('copied');
+                }, 2000);
+            }).catch(function(err) {
+                // Фолбэк для старых браузеров
+                var textArea = document.createElement('textarea');
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                
+                showToast();
+                btn.innerText = 'Скопировано!';
+                btn.classList.add('copied');
+                
+                setTimeout(function() {
+                    btn.innerText = 'Копировать';
+                    btn.classList.remove('copied');
+                }, 2000);
+            });
+        }
+
+        // Показ toast уведомления
+        function showToast() {
+            var toast = document.getElementById('toast');
+            toast.style.display = 'block';
+            
+            setTimeout(function() {
+                toast.style.display = 'none';
+            }, 2000);
+        }
+
         // Проверка returnUrl параметров
         function checkReturnUrl() {
             var urlParams = new URLSearchParams(window.location.search);
@@ -441,11 +547,9 @@
             var mdOrder = urlParams.get('mdOrder');
             
             if (orderId || mdOrder) {
-                // Мы вернулись с платежной страницы
                 var actualOrderId = orderId || mdOrder;
                 console.log('Return URL detected, orderId:', actualOrderId);
                 
-                // Показываем экран статуса
                 showScreen('screen-status');
                 checkOrderStatus(actualOrderId);
             }
@@ -457,33 +561,49 @@
             var text = document.getElementById('status-text');
             var result = document.getElementById('status-result');
             
+            console.log('=== ПРОВЕРКА СТАТУСА ===');
+            console.log('orderId:', orderId);
+            
             loader.style.display = 'block';
             text.style.display = 'block';
             text.innerText = 'Получение статуса заказа...';
             result.style.display = 'none';
 
             try {
+                console.log('Отправка запроса на /api/check-status...');
+                
                 var response = await fetch('/api/check-status', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ orderId: orderId })
                 });
 
+                console.log('Status code:', response.status);
+                console.log('Response OK:', response.ok);
+                
                 var data = await response.json();
-                console.log('Status response:', data);
+                console.log('=== ОТВЕТ API ===');
+                console.log(data);
+                console.log('==================');
 
-                if (!response.ok || data.error) {
-                    throw new Error(data.message || 'Ошибка получения статуса');
+                if (!response.ok) {
+                    throw new Error('HTTP error: ' + response.status + ' - ' + (data.message || data.error));
+                }
+                
+                if (data.error) {
+                    throw new Error(data.message || 'Ошибка в ответе API');
                 }
 
-                // Отображаем результат
                 displayOrderStatus(data);
                 loader.style.display = 'none';
                 text.style.display = 'none';
                 result.style.display = 'block';
 
             } catch (error) {
-                console.error('Status check error:', error);
+                console.error('=== ОШИБКА ===');
+                console.error(error);
+                console.error('============');
+                
                 loader.style.display = 'none';
                 text.innerText = 'Ошибка: ' + error.message;
                 text.style.color = '#ef3124';
@@ -498,22 +618,22 @@
             var statusBox = document.getElementById('status-box');
             var statusBadge = document.getElementById('st-status');
             
-            // Очищаем классы
             statusBadge.className = 'status-badge';
             statusBox.className = 'result-box';
             
-            // Устанавливаем статус
             statusBadge.classList.add(statusInfo.class);
             statusBadge.innerText = statusInfo.text;
             
-            // Цвет бокса в зависимости от статуса
             if (status === '2') {
                 statusBox.classList.add('success');
             } else if (status === '3' || status === '4' || status === '6') {
                 statusBox.classList.add('error');
             }
             
-            // Номер заказа
+            // Уникальный номер заказа (orderId)
+            document.getElementById('st-order-id').innerText = data.orderId || '-';
+            
+            // Номер заказа (orderNumber)
             document.getElementById('st-order-number').innerText = data.orderNumber || '-';
             
             // Сумма и валюта
@@ -524,21 +644,14 @@
             document.getElementById('st-amount').innerText = amount;
             document.getElementById('st-currency').innerText = currencyName;
             
-            // Маска карты
-            if (data.cardAuthInfo && data.cardAuthInfo.cardholderName) {
-                var cardNum = data.cardAuthInfo.panLast || '****';
+            // Маска карты из maskedPan
+            if (data.maskedPan) {
+                document.getElementById('st-card').innerText = data.maskedPan;
+            } else if (data.cardAuthInfo && data.cardAuthInfo.panLast) {
+                var cardNum = data.cardAuthInfo.panLast;
                 document.getElementById('st-card').innerText = '**** **** **** ' + cardNum;
-                document.getElementById('st-card').style.display = 'inline';
             } else {
                 document.getElementById('st-card').innerText = 'Не указана';
-            }
-            
-            // Срок действия (если есть)
-            if (data.cardAuthInfo && data.cardAuthInfo.expiration) {
-                document.getElementById('row-expiry').style.display = 'flex';
-                document.getElementById('st-expiry').innerText = data.cardAuthInfo.expiration;
-            } else {
-                document.getElementById('row-expiry').style.display = 'none';
             }
             
             // Код авторизации (если есть)
@@ -699,7 +812,6 @@
                     throw new Error(data.message || 'Ошибка сервера: ' + response.status);
                 }
 
-                // Сохраняем orderId и orderNumber
                 testConfig.orderId = data.orderId;
                 testConfig.orderNumber = data.orderNumber;
 
