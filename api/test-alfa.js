@@ -5,13 +5,14 @@ const CURRENCY_CODES = {
   'RUB': '643'
 };
 
+// Генерация orderNumber (макс 10 символов, буквы и цифры)
 function generateOrderNumber() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let result = 'ORD';
-  for (let i = 0; i < 9; i++) {
+  let result = '';
+  for (let i = 0; i < 10; i++) {
     result += chars.charAt(Math.floor(Math.random() * chars.length));
   }
-  return result;
+  return result; // Пример: A7K9M2X1B5
 }
 
 function toMinorUnits(amount) {
@@ -43,6 +44,7 @@ export default async function handler(req, res) {
       });
     }
 
+    // ГЕНЕРИРУЕМ orderNumber (наш номер заказа)
     const orderNumber = generateOrderNumber();
     const amountMinor = toMinorUnits(amount);
     const currencyCode = CURRENCY_CODES[currency];
@@ -56,7 +58,7 @@ export default async function handler(req, res) {
     params.append('password', process.env.ALFA_PASSWORD || 'ABB_3*?1');
     params.append('amount', amountMinor);
     params.append('currency', currencyCode);
-    params.append('orderNumber', orderNumber);  // ОДИНАКОВЫЙ orderNumber
+    params.append('orderNumber', orderNumber);  // ОТПРАВЛЯЕМ наш сгенерированный orderNumber
     params.append('returnUrl', returnUrl);
     
     if (stageType === 'one-stage') {
@@ -83,11 +85,14 @@ export default async function handler(req, res) {
         throw new Error(bankData.errorMessage || 'Ошибка от Альфа-Банка');
       }
 
+      // Возвращаем:
+      // - orderId (от банка, уникальный ID)
+      // - orderNumber (наш сгенерированный, который отправили)
       return res.status(200).json({
         status: 'success',
         message: 'Заказ зарегистрирован',
-        orderId: bankData.orderId,        // Уникальный ID от банка (UUID)
-        orderNumber: orderNumber,          // Наш orderNumber (тот же что отправили)
+        orderId: bankData.orderId,        // Уникальный ID от банка (сохраняем для статуса)
+        orderNumber: orderNumber,          // Наш orderNumber (показываем пользователю)
         amount: amount,
         currency: currency,
         formUrl: bankData.formUrl
