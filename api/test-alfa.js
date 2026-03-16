@@ -1,16 +1,35 @@
 export default function handler(req, res) {
-  // Здесь будет логика вызова API Альфа-Банка
-  
   const { scenario } = req.body;
 
-  if (scenario === 'init') {
-    // Пока просто возвращаем тестовый ответ
-    res.status(200).json({ 
+  // Имитация задержки сети (как будто реальный запрос в банк)
+  // setTimeout(() => { ... }, 1000); // Можно включить для реалистичности
+
+  if (scenario === 'ecom') {
+    // Сценарий Ecom
+    // Здесь в будущем будет код: await alfaApi.initPayment(...)
+    
+    // Для теста вернем успех
+    return res.status(200).json({ 
       status: 'success', 
-      message: 'Запрос отправлен в Альфа-Банк (тест)',
-      data: { orderId: '12345', amount: '1.00 BYN' }
+      message: 'Ecom запрос принят',
+      paymentUrl: 'https://example.com/pay' // Заглушка ссылки
     });
+
+  } else if (scenario === 'p2p') {
+    // Сценарий P2P
+    // Здесь в будущем будет код: await alfaApi.sendP2P(...)
+
+    // Для теста вернем успех
+    return res.status(200).json({ 
+      status: 'success', 
+      message: 'P2P запрос принят' 
+    });
+
   } else {
-    res.status(400).json({ error: 'Неизвестный сценарий' });
+    // Неизвестный сценарий
+    return res.status(400).json({ 
+      error: 'invalid_scenario', 
+      message: 'Выбран неизвестный тип операции' 
+    });
   }
 }
