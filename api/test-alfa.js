@@ -56,7 +56,7 @@ export default async function handler(req, res) {
     params.append('password', process.env.ALFA_PASSWORD || 'ABB_3*?1');
     params.append('amount', amountMinor);
     params.append('currency', currencyCode);
-    params.append('orderNumber', orderNumber);
+    params.append('orderNumber', orderNumber);  // ОДИНАКОВЫЙ orderNumber
     params.append('returnUrl', returnUrl);
     
     if (stageType === 'one-stage') {
@@ -86,8 +86,8 @@ export default async function handler(req, res) {
       return res.status(200).json({
         status: 'success',
         message: 'Заказ зарегистрирован',
-        orderId: bankData.orderId, // Важно: берем из ответа банка
-        orderNumber: orderNumber,
+        orderId: bankData.orderId,        // Уникальный ID от банка (UUID)
+        orderNumber: orderNumber,          // Наш orderNumber (тот же что отправили)
         amount: amount,
         currency: currency,
         formUrl: bankData.formUrl
