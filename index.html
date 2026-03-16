@@ -64,6 +64,11 @@
             border: 2px solid #ddd;
         }
 
+        .btn-secondary:hover {
+            border-color: #ef3124;
+            color: #ef3124;
+        }
+
         .screen {
             display: none;
         }
@@ -97,6 +102,7 @@
             background: rgba(0,0,0,0.5);
             justify-content: center;
             align-items: center;
+            z-index: 1000;
         }
 
         .modal-content {
@@ -105,6 +111,22 @@
             border-radius: 8px;
             max-width: 400px;
             border-left: 5px solid #ef3124;
+        }
+
+        .breadcrumb {
+            text-align: left;
+            margin-bottom: 20px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .breadcrumb span {
+            cursor: pointer;
+        }
+
+        .breadcrumb span:hover {
+            color: #ef3124;
+            text-decoration: underline;
         }
     </style>
 </head>
@@ -116,120 +138,162 @@
     </header>
 
     <div class="container">
+        
         <!-- Экран 1: Приветствие -->
         <div id="screen-welcome" class="screen active">
             <h1>Добро пожаловать</h1>
             <p>Тестирование API Альфа-Банка РБ</p>
-            <button class="btn" id="startBtn" onclick="handleStartClick()">Начать тестирование</button>
+            <button class="btn" onclick="showScreen('screen-select')">Начать тестирование</button>
         </div>
 
-        <!-- Экран 2: Выбор -->
+        <!-- Экран 2: Выбор типа операций -->
         <div id="screen-select" class="screen">
-            <h1>Выберите сценарий</h1>
-            <button class="btn" onclick="runTest('ecom')">Ecom-операции</button>
-            <button class="btn btn-secondary" onclick="runTest('p2p')">P2P-операции</button>
-            <button class="btn btn-secondary" onclick="showScreen('screen-welcome')">Назад</button>
+            <div class="breadcrumb"><span onclick="showScreen('screen-welcome')">← На главную</span></div>
+            <h1>Выберите тип операций</h1>
+            <button class="btn" onclick="selectOperationType('ecom')">Ecom-операции</button>
+            <button class="btn btn-secondary" onclick="selectOperationType('p2p')">P2P-операции</button>
         </div>
 
-        <!-- Экран 3: Процесс -->
+        <!-- Экран 3: ECOM - Тип регистрации -->
+        <div id="screen-ecom-type" class="screen">
+            <div class="breadcrumb"><span onclick="showScreen('screen-select')">← Назад</span></div>
+            <h1>Регистрация заказа</h1>
+            <p>Выберите тип регистрации заказа:</p>
+            <button class="btn" onclick="selectEcomType('no-binding')">Без привязки</button>
+            <button class="btn btn-secondary" onclick="selectEcomType('with-binding')">С привязкой</button>
+        </div>
+
+        <!-- Экран 4: ECOM - Стадийность -->
+        <div id="screen-ecom-stage" class="screen">
+            <div class="breadcrumb"><span onclick="showScreen('screen-ecom-type')">← Назад</span></div>
+            <h1>Тип оплаты</h1>
+            <p>Выберите стадийность платежа:</p>
+            <button class="btn" onclick="runEcomTest('one-stage')">Одностадийный</button>
+            <button class="btn btn-secondary" onclick="runEcomTest('two-stage')">Двухстадийный</button>
+        </div>
+
+        <!-- Экран 5: P2P (заглушка для будущего) -->
+        <div id="screen-p2p" class="screen">
+            <div class="breadcrumb"><span onclick="showScreen('screen-select')">← Назад</span></div>
+            <h1>P2P-операции</h1>
+            <p>Функционал в разработке</p>
+            <button class="btn btn-secondary" onclick="showScreen('screen-select')">Назад</button>
+        </div>
+
+        <!-- Экран 6: Процесс выполнения -->
         <div id="screen-process" class="screen">
+            <div class="breadcrumb"><span onclick="showScreen('screen-ecom-stage')">← Назад</span></div>
             <h1 id="process-title">Тестирование</h1>
             <div class="loader" id="loader"></div>
-            <p id="status">Обработка...</p>
-            <button class="btn btn-secondary" onclick="showScreen('screen-select')" style="display:none" id="backBtn">Назад</button>
+            <p id="status">Отправка запроса...</p>
+            <button class="btn btn-secondary" onclick="showScreen('screen-ecom-stage')" style="display:none" id="backBtn">Вернуться</button>
         </div>
+
     </div>
 
-    <!-- Модальное окно -->
+    <!-- Модальное окно ошибки -->
     <div id="errorModal" class="modal" onclick="this.style.display='none'">
         <div class="modal-content" onclick="event.stopPropagation()">
-            <h3 style="color:#ef3124;margin-top:0">Ошибка</h3>
+            <h3 style="color:#ef3124;margin-top:0">Ошибка API</h3>
             <p id="errorMsg">Текст ошибки</p>
             <button class="btn" onclick="document.getElementById('errorModal').style.display='none'">Закрыть</button>
         </div>
     </div>
 
     <script>
-        console.log('Script loaded');
+        // Глобальные переменные для хранения выбора
+        var testConfig = {
+            operationType: '',
+            registrationType: '',
+            stageType: ''
+        };
 
-        // Проверяем, что элементы существуют
-        window.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM loaded');
-            var startBtn = document.getElementById('startBtn');
-            if (startBtn) {
-                console.log('Start button found');
-            } else {
-                console.error('Start button NOT found');
-            }
-        });
-
-        function handleStartClick() {
-            console.log('Start button clicked!');
-            try {
-                showScreen('screen-select');
-                console.log('Screen changed to select');
-            } catch (error) {
-                console.error('Error in handleStartClick:', error);
-                alert('Ошибка: ' + error.message);
-            }
-        }
-
+        // Переключение экранов
         function showScreen(screenId) {
-            console.log('showScreen called with:', screenId);
-            try {
-                // Скрыть все экраны
-                var screens = document.getElementsByClassName('screen');
-                console.log('Found screens:', screens.length);
-                for (var i = 0; i < screens.length; i++) {
-                    screens[i].classList.remove('active');
-                }
-                
-                // Показать нужный
-                var targetScreen = document.getElementById(screenId);
-                if (targetScreen) {
-                    targetScreen.classList.add('active');
-                    console.log('Screen', screenId, 'is now active');
-                } else {
-                    console.error('Screen not found:', screenId);
-                }
-            } catch (error) {
-                console.error('Error in showScreen:', error);
-                throw error;
+            var screens = document.getElementsByClassName('screen');
+            for (var i = 0; i < screens.length; i++) {
+                screens[i].classList.remove('active');
+            }
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        // Выбор типа операции (ECOM / P2P)
+        function selectOperationType(type) {
+            testConfig.operationType = type;
+            console.log('Operation type selected:', type);
+            
+            if (type === 'ecom') {
+                showScreen('screen-ecom-type');
+            } else if (type === 'p2p') {
+                showScreen('screen-p2p');
             }
         }
 
-        async function runTest(type) {
-            console.log('runTest called with:', type);
+        // Выбор типа регистрации (с привязкой / без)
+        function selectEcomType(regType) {
+            testConfig.registrationType = regType;
+            console.log('Registration type selected:', regType);
+            showScreen('screen-ecom-stage');
+        }
+
+        // Запуск ECOM теста
+        async function runEcomTest(stageType) {
+            testConfig.stageType = stageType;
+            console.log('Full config:', testConfig);
+            
             showScreen('screen-process');
-            document.getElementById('process-title').innerText = type === 'ecom' ? 'Ecom-операции' : 'P2P-операции';
-            document.getElementById('status').innerText = 'Отправка запроса...';
-            document.getElementById('loader').style.display = 'block';
-            document.getElementById('backBtn').style.display = 'none';
+            
+            var title = document.getElementById('process-title');
+            var status = document.getElementById('status');
+            var loader = document.getElementById('loader');
+            var backBtn = document.getElementById('backBtn');
+
+            // Формируем заголовок
+            var regText = testConfig.registrationType === 'with-binding' ? 'С привязкой' : 'Без привязки';
+            var stageText = stageType === 'one-stage' ? 'Одностадийный' : 'Двухстадийный';
+            title.innerText = regText + ' / ' + stageText;
+
+            status.innerText = 'Отправка запроса в Альфа-Банк...';
+            status.style.color = '#666';
+            loader.style.display = 'block';
+            backBtn.style.display = 'none';
 
             try {
                 var response = await fetch('/api/test-alfa', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({scenario: type})
+                    body: JSON.stringify({
+                        operation: 'ecom',
+                        registrationType: testConfig.registrationType,
+                        stageType: testConfig.stageType
+                    })
                 });
 
+                console.log('Response status:', response.status);
                 var data = await response.json();
+                console.log('Response data:', data);
 
                 if (!response.ok || data.error) {
-                    throw new Error(data.message || 'Ошибка сервера');
+                    throw new Error(data.message || 'Ошибка сервера: ' + response.status);
                 }
 
-                document.getElementById('loader').style.display = 'none';
-                document.getElementById('status').innerText = 'Успешно выполнено!';
-                document.getElementById('status').style.color = 'green';
-                document.getElementById('backBtn').style.display = 'inline-block';
+                loader.style.display = 'none';
+                status.innerText = '✓ ' + (data.message || 'Операция выполнена успешно');
+                status.style.color = 'green';
+                backBtn.style.display = 'inline-block';
+
+                // Если есть ссылка на оплату - можно добавить переход
+                if (data.paymentUrl) {
+                    status.innerHTML += '<br><br><a href="' + data.paymentUrl + '" target="_blank" style="color:#ef3124">Перейти к оплате →</a>';
+                }
 
             } catch (error) {
                 console.error('Test error:', error);
-                document.getElementById('loader').style.display = 'none';
-                document.getElementById('status').innerText = 'Ошибка выполнения';
-                document.getElementById('status').style.color = 'red';
-                document.getElementById('backBtn').style.display = 'inline-block';
+                loader.style.display = 'none';
+                status.innerText = '✗ Ошибка выполнения';
+                status.style.color = 'red';
+                backBtn.style.display = 'inline-block';
+                
                 document.getElementById('errorMsg').innerText = error.message;
                 document.getElementById('errorModal').style.display = 'flex';
             }
