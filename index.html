@@ -32,7 +32,7 @@
         }
 
         .container {
-            max-width: 600px;
+            max-width: 700px;
             margin: 50px auto;
             background: white;
             padding: 40px;
@@ -182,17 +182,69 @@
             display: block;
         }
 
-        .result-details {
+        .result-box {
             background: #f8f9fa;
-            padding: 15px;
-            border-radius: 5px;
-            margin: 15px 0;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
             text-align: left;
-            font-size: 14px;
+            border-left: 4px solid #ef3124;
         }
 
-        .result-details strong {
+        .result-box.success {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+
+        .result-box.error {
+            border-left-color: #ef3124;
+            background: #f8d7da;
+        }
+
+        .result-row {
+            margin: 10px 0;
+            padding: 8px 0;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .result-row:last-child {
+            border-bottom: none;
+        }
+
+        .result-label {
+            font-weight: bold;
             color: #333;
+        }
+
+        .result-value {
+            color: #666;
+            text-align: right;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .status-0 { background: #fff3cd; color: #856404; }
+        .status-1 { background: #d1ecf1; color: #0c5460; }
+        .status-2 { background: #d4edda; color: #155724; }
+        .status-3 { background: #f8d7da; color: #721c24; }
+        .status-4 { background: #f8d7da; color: #721c24; }
+        .status-5 { background: #d1ecf1; color: #0c5460; }
+        .status-6 { background: #f8d7da; color: #721c24; }
+        .status-7 { background: #fff3cd; color: #856404; }
+        .status-8 { background: #d1ecf1; color: #0c5460; }
+
+        .card-mask {
+            font-family: 'Courier New', monospace;
+            font-size: 18px;
+            letter-spacing: 2px;
         }
     </style>
 </head>
@@ -289,6 +341,50 @@
             <button class="btn btn-pay" id="payBtn" style="display:none">Перейти к оплате →</button>
         </div>
 
+        <!-- Экран 8: Результат статуса заказа -->
+        <div id="screen-status" class="screen">
+            <div class="breadcrumb"><span onclick="showScreen('screen-welcome')">← На главную</span></div>
+            <h1>Статус платежа</h1>
+            
+            <div id="status-loader" class="loader" style="display:block"></div>
+            <p id="status-text">Получение информации...</p>
+
+            <div id="status-result" style="display:none">
+                <div class="result-box" id="status-box">
+                    <div class="result-row">
+                        <span class="result-label">Статус:</span>
+                        <span class="result-value"><span class="status-badge" id="st-status"></span></span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">Номер заказа:</span>
+                        <span class="result-value" id="st-order-number"></span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">Сумма:</span>
+                        <span class="result-value" id="st-amount"></span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">Валюта:</span>
+                        <span class="result-value" id="st-currency"></span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">Карта:</span>
+                        <span class="result-value card-mask" id="st-card"></span>
+                    </div>
+                    <div class="result-row" id="row-expiry" style="display:none">
+                        <span class="result-label">Срок действия:</span>
+                        <span class="result-value" id="st-expiry"></span>
+                    </div>
+                    <div class="result-row" id="row-auth" style="display:none">
+                        <span class="result-label">Код авторизации:</span>
+                        <span class="result-value" id="st-auth"></span>
+                    </div>
+                </div>
+
+                <button class="btn" onclick="showScreen('screen-welcome')">Новый платеж</button>
+            </div>
+        </div>
+
     </div>
 
     <!-- Модальное окно ошибки -->
@@ -301,14 +397,158 @@
     </div>
 
     <script>
-        // Глобальные переменные для хранения выбора
+        // Глобальные переменные
         var testConfig = {
             operationType: '',
             registrationType: '',
             stageType: '',
             amount: '',
-            currency: ''
+            currency: '',
+            orderId: '',
+            orderNumber: ''
         };
+
+        // Карта статусов
+        var statusMap = {
+            '0': { text: 'Заказ зарегистрирован, не оплачен', class: 'status-0' },
+            '1': { text: 'Заказ авторизован, не завершен', class: 'status-1' },
+            '2': { text: 'Оплата успешно завершена', class: 'status-2' },
+            '3': { text: 'Авторизация отменена', class: 'status-3' },
+            '4': { text: 'Возврат совершен', class: 'status-4' },
+            '5': { text: 'Инициирована 3D-Secure', class: 'status-5' },
+            '6': { text: 'Оплата отклонена', class: 'status-6' },
+            '7': { text: 'Ожидание оплаты', class: 'status-7' },
+            '8': { text: 'Частичное завершение', class: 'status-8' }
+        };
+
+        // Карта валют
+        var currencyMap = {
+            '933': 'BYN',
+            '840': 'USD',
+            '978': 'EUR',
+            '643': 'RUB'
+        };
+
+        // Инициализация при загрузке
+        window.addEventListener('DOMContentLoaded', function() {
+            checkReturnUrl();
+        });
+
+        // Проверка returnUrl параметров
+        function checkReturnUrl() {
+            var urlParams = new URLSearchParams(window.location.search);
+            var orderId = urlParams.get('orderId');
+            var mdOrder = urlParams.get('mdOrder');
+            
+            if (orderId || mdOrder) {
+                // Мы вернулись с платежной страницы
+                var actualOrderId = orderId || mdOrder;
+                console.log('Return URL detected, orderId:', actualOrderId);
+                
+                // Показываем экран статуса
+                showScreen('screen-status');
+                checkOrderStatus(actualOrderId);
+            }
+        }
+
+        // Проверка статуса заказа
+        async function checkOrderStatus(orderId) {
+            var loader = document.getElementById('status-loader');
+            var text = document.getElementById('status-text');
+            var result = document.getElementById('status-result');
+            
+            loader.style.display = 'block';
+            text.style.display = 'block';
+            text.innerText = 'Получение статуса заказа...';
+            result.style.display = 'none';
+
+            try {
+                var response = await fetch('/api/check-status', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ orderId: orderId })
+                });
+
+                var data = await response.json();
+                console.log('Status response:', data);
+
+                if (!response.ok || data.error) {
+                    throw new Error(data.message || 'Ошибка получения статуса');
+                }
+
+                // Отображаем результат
+                displayOrderStatus(data);
+                loader.style.display = 'none';
+                text.style.display = 'none';
+                result.style.display = 'block';
+
+            } catch (error) {
+                console.error('Status check error:', error);
+                loader.style.display = 'none';
+                text.innerText = 'Ошибка: ' + error.message;
+                text.style.color = '#ef3124';
+            }
+        }
+
+        // Отображение статуса
+        function displayOrderStatus(data) {
+            var status = data.orderStatus;
+            var statusInfo = statusMap[status] || { text: 'Неизвестный статус', class: 'status-0' };
+            
+            var statusBox = document.getElementById('status-box');
+            var statusBadge = document.getElementById('st-status');
+            
+            // Очищаем классы
+            statusBadge.className = 'status-badge';
+            statusBox.className = 'result-box';
+            
+            // Устанавливаем статус
+            statusBadge.classList.add(statusInfo.class);
+            statusBadge.innerText = statusInfo.text;
+            
+            // Цвет бокса в зависимости от статуса
+            if (status === '2') {
+                statusBox.classList.add('success');
+            } else if (status === '3' || status === '4' || status === '6') {
+                statusBox.classList.add('error');
+            }
+            
+            // Номер заказа
+            document.getElementById('st-order-number').innerText = data.orderNumber || '-';
+            
+            // Сумма и валюта
+            var amount = data.amount ? (parseFloat(data.amount) / 100).toFixed(2) : '-';
+            var currencyCode = data.currency || '933';
+            var currencyName = currencyMap[currencyCode] || currencyCode;
+            
+            document.getElementById('st-amount').innerText = amount;
+            document.getElementById('st-currency').innerText = currencyName;
+            
+            // Маска карты
+            if (data.cardAuthInfo && data.cardAuthInfo.cardholderName) {
+                var cardNum = data.cardAuthInfo.panLast || '****';
+                document.getElementById('st-card').innerText = '**** **** **** ' + cardNum;
+                document.getElementById('st-card').style.display = 'inline';
+            } else {
+                document.getElementById('st-card').innerText = 'Не указана';
+            }
+            
+            // Срок действия (если есть)
+            if (data.cardAuthInfo && data.cardAuthInfo.expiration) {
+                document.getElementById('row-expiry').style.display = 'flex';
+                document.getElementById('st-expiry').innerText = data.cardAuthInfo.expiration;
+            } else {
+                document.getElementById('row-expiry').style.display = 'none';
+            }
+            
+            // Код авторизации (если есть)
+            if (data.authCode) {
+                document.getElementById('row-auth').style.display = 'flex';
+                document.getElementById('st-auth').innerText = data.authCode;
+            } else {
+                document.getElementById('row-auth').style.display = 'none';
+            }
+        }
 
         // Переключение экранов
         function showScreen(screenId) {
@@ -337,7 +577,7 @@
             if (errorEl) errorEl.classList.remove('show');
         }
 
-        // Валидация суммы при вводе
+        // Валидация суммы
         function validateAmount(input) {
             input.value = input.value.replace(/[^0-9.]/g, '');
             var parts = input.value.split('.');
@@ -349,7 +589,7 @@
             }
         }
 
-        // Форматирование суммы при потере фокуса
+        // Форматирование суммы
         function formatAmount(input) {
             var value = input.value.trim();
             if (value && !value.includes('.')) {
@@ -362,7 +602,7 @@
             }
         }
 
-        // Проверка корректности суммы
+        // Проверка суммы
         function isValidAmount(amount) {
             var regex = /^\d+(\.\d{2})?$/;
             return regex.test(amount) && parseFloat(amount) > 0;
@@ -459,8 +699,11 @@
                     throw new Error(data.message || 'Ошибка сервера: ' + response.status);
                 }
 
-                // Показываем детали результата
-                document.getElementById('res-order').innerText = data.orderId || '-';
+                // Сохраняем orderId и orderNumber
+                testConfig.orderId = data.orderId;
+                testConfig.orderNumber = data.orderNumber;
+
+                document.getElementById('res-order').innerText = data.orderNumber || '-';
                 document.getElementById('res-amount').innerText = data.amount + ' ' + data.currency;
                 document.getElementById('res-currency').innerText = data.currency;
                 resultDetails.style.display = 'block';
@@ -470,7 +713,6 @@
                 status.style.color = 'green';
                 backBtn.style.display = 'inline-block';
 
-                // Кнопка перехода на оплату
                 if (data.formUrl) {
                     payBtn.style.display = 'inline-block';
                     payBtn.onclick = function() {
