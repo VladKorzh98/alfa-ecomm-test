@@ -428,7 +428,7 @@
                     </div>
                 </div>
 
-                <button class="btn" onclick="showScreen('screen-welcome')">Новый платеж</button>
+                <button class="btn" onclick="clearSessionAndGoHome()">Новый платеж</button>
             </div>
         </div>
 
@@ -474,9 +474,50 @@
             '643': 'RUB'
         };
 
+        // ВОССТАНАВЛИВАЕМ данные из sessionStorage при загрузке
         window.addEventListener('DOMContentLoaded', function() {
+            restoreFromSession();
             checkReturnUrl();
         });
+
+        // Восстановление из sessionStorage
+        function restoreFromSession() {
+            var savedOrderId = sessionStorage.getItem('orderId');
+            var savedOrderNumber = sessionStorage.getItem('orderNumber');
+            
+            if (savedOrderId) {
+                testConfig.orderId = savedOrderId;
+                console.log('Restored orderId from session:', testConfig.orderId);
+            }
+            if (savedOrderNumber) {
+                testConfig.orderNumber = savedOrderNumber;
+                console.log('Restored orderNumber from session:', testConfig.orderNumber);
+            }
+        }
+
+        // Сохранение в sessionStorage
+        function saveToSession() {
+            if (testConfig.orderId) {
+                sessionStorage.setItem('orderId', testConfig.orderId);
+            }
+            if (testConfig.orderNumber) {
+                sessionStorage.setItem('orderNumber', testConfig.orderNumber);
+            }
+            console.log('Saved to session:', { orderId: testConfig.orderId, orderNumber: testConfig.orderNumber });
+        }
+
+        // Очистка sessionStorage
+        function clearSession() {
+            sessionStorage.removeItem('orderId');
+            sessionStorage.removeItem('orderNumber');
+            testConfig.orderId = '';
+            testConfig.orderNumber = '';
+        }
+
+        function clearSessionAndGoHome() {
+            clearSession();
+            showScreen('screen-welcome');
+        }
 
         function copyToClipboard(elementId, btn) {
             var element = document.getElementById(elementId);
@@ -602,6 +643,9 @@
             } else if (status === '3' || status === '4' || status === '6') {
                 statusBox.classList.add('error');
             }
+            
+            console.log('Displaying orderId:', data.orderId);
+            console.log('Displaying orderNumber:', data.orderNumber);
             
             document.getElementById('st-order-id').innerText = data.orderId || '-';
             document.getElementById('st-order-number').innerText = data.orderNumber || '-';
@@ -769,6 +813,9 @@
 
                 testConfig.orderId = data.orderId;
                 testConfig.orderNumber = data.orderNumber;
+                
+                // СОХРАНЯЕМ в sessionStorage
+                saveToSession();
                 
                 console.log('Saved orderId:', testConfig.orderId);
                 console.log('Saved orderNumber:', testConfig.orderNumber);
