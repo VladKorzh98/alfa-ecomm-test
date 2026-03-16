@@ -1,4 +1,3 @@
-// Карта валют: код валюты -> цифровой код (ISO 4217)
 const CURRENCY_CODES = {
   'BYN': '933',
   'USD': '840', 
@@ -6,7 +5,6 @@ const CURRENCY_CODES = {
   'RUB': '643'
 };
 
-// Генерация уникального orderNumber (макс 12 символов)
 function generateOrderNumber() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let result = 'ORD';
@@ -16,7 +14,6 @@ function generateOrderNumber() {
   return result;
 }
 
-// Конвертация суммы в минорные единицы
 function toMinorUnits(amount) {
   return Math.round(parseFloat(amount) * 100).toString();
 }
@@ -32,7 +29,6 @@ export default async function handler(req, res) {
 
   if (operation === 'ecom') {
     
-    // Валидация
     if (!amount || !/^\d+(\.\d{1,2})?$/.test(amount)) {
       return res.status(400).json({
         error: 'invalid_amount',
@@ -47,7 +43,6 @@ export default async function handler(req, res) {
       });
     }
 
-    // Подготовка параметров
     const orderNumber = generateOrderNumber();
     const amountMinor = toMinorUnits(amount);
     const currencyCode = CURRENCY_CODES[currency];
@@ -91,7 +86,8 @@ export default async function handler(req, res) {
       return res.status(200).json({
         status: 'success',
         message: 'Заказ зарегистрирован',
-        orderId: orderNumber,
+        orderId: bankData.orderId, // Важно: берем из ответа банка
+        orderNumber: orderNumber,
         amount: amount,
         currency: currency,
         formUrl: bankData.formUrl
