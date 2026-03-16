@@ -47,16 +47,14 @@ export default async function handler(req, res) {
       throw new Error(bankData.errorMessage || 'Ошибка от Альфа-Банка');
     }
 
-    // ВОЗВРАЩАЕМ:
-    // - orderId: от банка
-    // - orderNumber: НАШ (который передали в запросе), НЕ от банка!
     return res.status(200).json({
-      orderId: bankData.orderId,
-      orderNumber: orderNumber,  // Используем НАШ orderNumber!
+      orderId: bankData.orderId,           // orderId от банка
+      orderNumber: orderNumber,            // НАШ orderNumber
       orderStatus: bankData.orderStatus,
       amount: bankData.amount,
       currency: bankData.currency,
       authCode: bankData.authCode || null,
+      actionCodeDescription: bankData.actionCodeDescription || null,  // Описание ошибки
       cardAuthInfo: {
         maskedPan: bankData.cardAuthInfo?.maskedPan || null,
         cardholderName: bankData.cardAuthInfo?.cardholderName || null,
