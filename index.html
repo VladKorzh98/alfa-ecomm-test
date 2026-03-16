@@ -533,7 +533,8 @@
             currency: '',
             orderId: '',
             orderNumber: '',
-            preAuthAmount: ''
+            preAuthAmount: '',
+            completedAmount: ''
         };
 
         var statusMap = {
@@ -565,11 +566,13 @@
             var savedOrderNumber = sessionStorage.getItem('orderNumber');
             var savedStageType = sessionStorage.getItem('stageType');
             var savedPreAuthAmount = sessionStorage.getItem('preAuthAmount');
+            var savedCompletedAmount = sessionStorage.getItem('completedAmount');
             
             if (savedOrderId) testConfig.orderId = savedOrderId;
             if (savedOrderNumber) testConfig.orderNumber = savedOrderNumber;
             if (savedStageType) testConfig.stageType = savedStageType;
             if (savedPreAuthAmount) testConfig.preAuthAmount = savedPreAuthAmount;
+            if (savedCompletedAmount) testConfig.completedAmount = savedCompletedAmount;
         }
 
         function saveToSession() {
@@ -577,13 +580,15 @@
             if (testConfig.orderNumber) sessionStorage.setItem('orderNumber', testConfig.orderNumber);
             if (testConfig.stageType) sessionStorage.setItem('stageType', testConfig.stageType);
             if (testConfig.preAuthAmount) sessionStorage.setItem('preAuthAmount', testConfig.preAuthAmount);
+            if (testConfig.completedAmount) sessionStorage.setItem('completedAmount', testConfig.completedAmount);
         }
 
         function clearSession() {
             sessionStorage.clear();
             testConfig = {
                 operationType: '', registrationType: '', stageType: '',
-                amount: '', currency: '', orderId: '', orderNumber: '', preAuthAmount: ''
+                amount: '', currency: '', orderId: '', orderNumber: '', 
+                preAuthAmount: '', completedAmount: ''
             };
         }
 
@@ -712,10 +717,11 @@
                 var preAuthAmount = testConfig.preAuthAmount || (data.amount ? (parseFloat(data.amount) / 100).toFixed(2) : '-');
                 document.getElementById('st-preauth-amount').innerText = preAuthAmount + ' ' + currencyName;
                 
-                // Если есть сумма завершения
-                if (data.completedAmount) {
+                // Если есть сумма завершения (из sessionStorage или из API)
+                var completedAmount = testConfig.completedAmount || data.completedAmount;
+                if (completedAmount) {
                     rowCompleted.style.display = 'flex';
-                    document.getElementById('st-completed-amount').innerText = data.completedAmount + ' ' + currencyName;
+                    document.getElementById('st-completed-amount').innerText = completedAmount + ' ' + currencyName;
                 } else {
                     rowCompleted.style.display = 'none';
                 }
@@ -805,19 +811,21 @@
                 
                 console.log('Response status:', response.status);
                 
-                if (!response.ok) {
-                    throw new Error('HTTP error: ' + response.status);
-                }
-                
                 var data = await response.json();
                 console.log('Response data:', data);
+                
+                // Проверяем HTTP статус и наличие ошибки
+                if (!response.ok) {
+                    throw new Error(data.message || 'HTTP error: ' + response.status);
+                }
                 
                 if (data.error) {
                     throw new Error(data.message || 'Ошибка при завершении заказа');
                 }
                 
-                // Успешное завершение - показываем страницу статуса
+                // Успешное завершение - сохраняем сумму завершения
                 testConfig.completedAmount = amount;
+                saveToSession();
                 
                 console.log('Success! Reloading status...');
                 
@@ -830,8 +838,8 @@
                 console.error(error);
                 console.error('=====================');
                 
-                // Показываем ошибку и оставляем форму активной
-                showErrorModal(error.message || 'Не удалось завершить заказ. Попробуйте снова.');
+                // Показываем реальное сообщение ошибки
+                showErrorModal(error.message || 'Не удалось завершить заказ');
                 
                 // Разблокируем кнопку
                 submitBtn.disabled = false;
@@ -877,8 +885,7 @@
                 alert('Заказ успешно отменён!');
                 checkOrderStatus(testConfig.orderId);
             } catch (error) {
-                document.getElementById('errorMsg').innerText = error.message;
-                document.getElementById('errorModal').style.display = 'flex';
+                showErrorModal(error.message);
             }
         }
 
@@ -1039,8 +1046,7 @@
                 status.innerText = '✗ Ошибка: ' + error.message;
                 status.style.color = 'red';
                 backBtn.style.display = 'inline-block';
-                document.getElementById('errorMsg').innerText = error.message;
-                document.getElementById('errorModal').style.display = 'flex';
+                showErrorModal(error.message);
             }
         }
     </script>
