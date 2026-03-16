@@ -116,15 +116,124 @@
     </header>
 
     <div class="container">
-        <!-- Экран 1: Приветствие (АКТИВНЫЙ ПО УМОЛЧАНИЮ) -->
+        <!-- Экран 1: Приветствие -->
         <div id="screen-welcome" class="screen active">
             <h1>Добро пожаловать</h1>
             <p>Тестирование API Альфа-Банка РБ</p>
-            <button class="btn" onclick="showScreen('screen-select')">Начать тестирование</button>
+            <button class="btn" id="startBtn" onclick="handleStartClick()">Начать тестирование</button>
         </div>
 
         <!-- Экран 2: Выбор -->
         <div id="screen-select" class="screen">
             <h1>Выберите сценарий</h1>
             <button class="btn" onclick="runTest('ecom')">Ecom-операции</button>
-            <button class="btn btn-secondary" onclick="runTest
+            <button class="btn btn-secondary" onclick="runTest('p2p')">P2P-операции</button>
+            <button class="btn btn-secondary" onclick="showScreen('screen-welcome')">Назад</button>
+        </div>
+
+        <!-- Экран 3: Процесс -->
+        <div id="screen-process" class="screen">
+            <h1 id="process-title">Тестирование</h1>
+            <div class="loader" id="loader"></div>
+            <p id="status">Обработка...</p>
+            <button class="btn btn-secondary" onclick="showScreen('screen-select')" style="display:none" id="backBtn">Назад</button>
+        </div>
+    </div>
+
+    <!-- Модальное окно -->
+    <div id="errorModal" class="modal" onclick="this.style.display='none'">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h3 style="color:#ef3124;margin-top:0">Ошибка</h3>
+            <p id="errorMsg">Текст ошибки</p>
+            <button class="btn" onclick="document.getElementById('errorModal').style.display='none'">Закрыть</button>
+        </div>
+    </div>
+
+    <script>
+        console.log('Script loaded');
+
+        // Проверяем, что элементы существуют
+        window.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded');
+            var startBtn = document.getElementById('startBtn');
+            if (startBtn) {
+                console.log('Start button found');
+            } else {
+                console.error('Start button NOT found');
+            }
+        });
+
+        function handleStartClick() {
+            console.log('Start button clicked!');
+            try {
+                showScreen('screen-select');
+                console.log('Screen changed to select');
+            } catch (error) {
+                console.error('Error in handleStartClick:', error);
+                alert('Ошибка: ' + error.message);
+            }
+        }
+
+        function showScreen(screenId) {
+            console.log('showScreen called with:', screenId);
+            try {
+                // Скрыть все экраны
+                var screens = document.getElementsByClassName('screen');
+                console.log('Found screens:', screens.length);
+                for (var i = 0; i < screens.length; i++) {
+                    screens[i].classList.remove('active');
+                }
+                
+                // Показать нужный
+                var targetScreen = document.getElementById(screenId);
+                if (targetScreen) {
+                    targetScreen.classList.add('active');
+                    console.log('Screen', screenId, 'is now active');
+                } else {
+                    console.error('Screen not found:', screenId);
+                }
+            } catch (error) {
+                console.error('Error in showScreen:', error);
+                throw error;
+            }
+        }
+
+        async function runTest(type) {
+            console.log('runTest called with:', type);
+            showScreen('screen-process');
+            document.getElementById('process-title').innerText = type === 'ecom' ? 'Ecom-операции' : 'P2P-операции';
+            document.getElementById('status').innerText = 'Отправка запроса...';
+            document.getElementById('loader').style.display = 'block';
+            document.getElementById('backBtn').style.display = 'none';
+
+            try {
+                var response = await fetch('/api/test-alfa', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({scenario: type})
+                });
+
+                var data = await response.json();
+
+                if (!response.ok || data.error) {
+                    throw new Error(data.message || 'Ошибка сервера');
+                }
+
+                document.getElementById('loader').style.display = 'none';
+                document.getElementById('status').innerText = 'Успешно выполнено!';
+                document.getElementById('status').style.color = 'green';
+                document.getElementById('backBtn').style.display = 'inline-block';
+
+            } catch (error) {
+                console.error('Test error:', error);
+                document.getElementById('loader').style.display = 'none';
+                document.getElementById('status').innerText = 'Ошибка выполнения';
+                document.getElementById('status').style.color = 'red';
+                document.getElementById('backBtn').style.display = 'inline-block';
+                document.getElementById('errorMsg').innerText = error.message;
+                document.getElementById('errorModal').style.display = 'flex';
+            }
+        }
+    </script>
+</body>
+</html>
