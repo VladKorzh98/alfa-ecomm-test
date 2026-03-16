@@ -455,7 +455,6 @@
             <button class="btn btn-pay" id="payBtn" style="display:none">Перейти к оплате →</button>
         </div>
 
-        <!-- Экран ввода суммы завершения -->
         <div id="screen-complete-amount" class="screen">
             <div class="breadcrumb"><span onclick="showScreen('screen-status')">← Назад</span></div>
             <h1>Завершение заказа</h1>
@@ -472,7 +471,6 @@
             <button class="btn btn-secondary" onclick="showScreen('screen-status')">Отмена</button>
         </div>
 
-        <!-- Экран ввода суммы отмены -->
         <div id="screen-refund-amount" class="screen">
             <div class="breadcrumb"><span onclick="showScreen('screen-status')">← Назад</span></div>
             <h1>Отмена части заказа</h1>
@@ -561,7 +559,6 @@
 
     <div id="toast" class="toast">Скопировано!</div>
 
-    <!-- Всплывающее окно результата операции -->
     <div id="resultToast" class="result-toast">
         <div class="result-toast-title" id="resultToastTitle">Успех</div>
         <div id="resultToastMessage">Операция выполнена</div>
@@ -654,6 +651,8 @@
 
         function copyToClipboard(elementId, btn) {
             var element = document.getElementById(elementId);
+            if (!element) return;
+            
             var text = element.innerText;
             
             navigator.clipboard.writeText(text).then(function() {
@@ -684,6 +683,7 @@
 
         function showToast() {
             var toast = document.getElementById('toast');
+            if (!toast) return;
             toast.style.display = 'block';
             setTimeout(function() { toast.style.display = 'none'; }, 2000);
         }
@@ -692,6 +692,8 @@
             var toast = document.getElementById('resultToast');
             var title = document.getElementById('resultToastTitle');
             var msg = document.getElementById('resultToastMessage');
+            
+            if (!toast || !title || !msg) return;
             
             title.innerText = isSuccess ? 'Успех' : 'Ошибка';
             msg.innerText = message;
@@ -719,6 +721,11 @@
             var loader = document.getElementById('status-loader');
             var text = document.getElementById('status-text');
             var result = document.getElementById('status-result');
+            
+            if (!loader || !text || !result) {
+                console.error('Required DOM elements not found');
+                return;
+            }
             
             loader.style.display = 'block';
             text.style.display = 'block';
@@ -749,6 +756,7 @@
             } catch (error) {
                 console.error('Status error:', error);
                 loader.style.display = 'none';
+                text.style.display = 'block';
                 text.innerText = 'Ошибка: ' + error.message;
                 text.style.color = '#ef3124';
             }
@@ -761,77 +769,95 @@
             var statusBox = document.getElementById('status-box');
             var statusBadge = document.getElementById('st-status');
             
+            if (!statusBox || !statusBadge) {
+                console.error('Status elements not found');
+                return;
+            }
+            
             statusBadge.className = 'status-badge';
             statusBox.className = 'result-box';
             
             statusBadge.classList.add(statusInfo.class);
             statusBadge.innerText = statusInfo.text;
             
-            document.getElementById('st-order-id').innerText = data.orderId || testConfig.orderId || '-';
-            document.getElementById('st-order-number').innerText = data.orderNumber || '-';
+            var orderIdEl = document.getElementById('st-order-id');
+            var orderNumberEl = document.getElementById('st-order-number');
+            var currencyEl = document.getElementById('st-currency');
+            var cardEl = document.getElementById('st-card');
+            
+            if (orderIdEl) orderIdEl.innerText = data.orderId || testConfig.orderId || '-';
+            if (orderNumberEl) orderNumberEl.innerText = data.orderNumber || '-';
             
             var currencyCode = data.currency || '933';
             var currencyName = currencyMap[currencyCode] || currencyCode;
-            document.getElementById('st-currency').innerText = currencyName;
+            if (currencyEl) currencyEl.innerText = currencyName;
             
             var rowPreAuth = document.getElementById('row-preauth-amount');
             var rowCompleted = document.getElementById('row-completed-amount');
             var rowRefunded = document.getElementById('row-refunded-amount');
+            var preAuthEl = document.getElementById('st-preauth-amount');
+            var completedEl = document.getElementById('st-completed-amount');
+            var refundedEl = document.getElementById('st-refunded-amount');
             
             if (testConfig.stageType === 'two-stage') {
-                rowPreAuth.style.display = 'flex';
+                if (rowPreAuth) rowPreAuth.style.display = 'flex';
                 var preAuthAmount = testConfig.preAuthAmount || (data.amount ? (parseFloat(data.amount) / 100).toFixed(2) : '-');
-                document.getElementById('st-preauth-amount').innerText = preAuthAmount + ' ' + currencyName;
+                if (preAuthEl) preAuthEl.innerText = preAuthAmount + ' ' + currencyName;
                 
-                // Сумма завершения (если есть)
                 if (testConfig.completedAmount) {
-                    rowCompleted.style.display = 'flex';
-                    document.getElementById('st-completed-amount').innerText = testConfig.completedAmount + ' ' + currencyName;
+                    if (rowCompleted) rowCompleted.style.display = 'flex';
+                    if (completedEl) completedEl.innerText = testConfig.completedAmount + ' ' + currencyName;
                 } else {
-                    rowCompleted.style.display = 'none';
+                    if (rowCompleted) rowCompleted.style.display = 'none';
                 }
                 
-                // Сумма отмены (если есть)
                 if (testConfig.refundedAmount && parseFloat(testConfig.refundedAmount) > 0) {
-                    rowRefunded.style.display = 'flex';
-                    document.getElementById('st-refunded-amount').innerText = testConfig.refundedAmount + ' ' + currencyName;
+                    if (rowRefunded) rowRefunded.style.display = 'flex';
+                    if (refundedEl) refundedEl.innerText = testConfig.refundedAmount + ' ' + currencyName;
                 } else {
-                    rowRefunded.style.display = 'none';
+                    if (rowRefunded) rowRefunded.style.display = 'none';
                 }
             } else {
-                rowPreAuth.style.display = 'none';
-                rowCompleted.style.display = 'none';
-                rowRefunded.style.display = 'none';
+                if (rowPreAuth) rowPreAuth.style.display = 'none';
+                if (rowCompleted) rowCompleted.style.display = 'none';
+                if (rowRefunded) rowRefunded.style.display = 'none';
                 
                 var amount = data.amount ? (parseFloat(data.amount) / 100).toFixed(2) : '-';
-                document.getElementById('st-amount').innerText = amount + ' ' + currencyName;
+                var amountEl = document.getElementById('st-amount');
+                if (amountEl) amountEl.innerText = amount + ' ' + currencyName;
             }
             
-            if (data.cardAuthInfo && data.cardAuthInfo.maskedPan) {
-                document.getElementById('st-card').innerText = data.cardAuthInfo.maskedPan;
-            } else {
-                document.getElementById('st-card').innerText = 'Не указана';
+            if (cardEl) {
+                if (data.cardAuthInfo && data.cardAuthInfo.maskedPan) {
+                    cardEl.innerText = data.cardAuthInfo.maskedPan;
+                } else {
+                    cardEl.innerText = 'Не указана';
+                }
             }
             
+            var rowAuth = document.getElementById('row-auth');
+            var authEl = document.getElementById('st-auth');
             if (data.authCode) {
-                document.getElementById('row-auth').style.display = 'flex';
-                document.getElementById('st-auth').innerText = data.authCode;
+                if (rowAuth) rowAuth.style.display = 'flex';
+                if (authEl) authEl.innerText = data.authCode;
             } else {
-                document.getElementById('row-auth').style.display = 'none';
+                if (rowAuth) rowAuth.style.display = 'none';
             }
             
+            var errorDescBlock = document.getElementById('error-description-block');
+            var errorDescEl = document.getElementById('st-error-description');
             if (status === '6' && data.actionCodeDescription) {
-                document.getElementById('error-description-block').style.display = 'block';
-                document.getElementById('st-error-description').innerText = data.actionCodeDescription;
+                if (errorDescBlock) errorDescBlock.style.display = 'block';
+                if (errorDescEl) errorDescEl.innerText = data.actionCodeDescription;
             } else {
-                document.getElementById('error-description-block').style.display = 'none';
+                if (errorDescBlock) errorDescBlock.style.display = 'none';
             }
             
-            // Показываем кнопки только для двухстадийных со статусом 1 (Подтвержден)
+            var actionButtons = document.getElementById('action-buttons');
             if (testConfig.stageType === 'two-stage' && status === '1') {
-                document.getElementById('action-buttons').style.display = 'block';
+                if (actionButtons) actionButtons.style.display = 'block';
             } else {
-                document.getElementById('action-buttons').style.display = 'none';
+                if (actionButtons) actionButtons.style.display = 'none';
             }
         }
 
@@ -840,9 +866,13 @@
             var refunded = parseFloat(testConfig.refundedAmount) || 0;
             var available = Math.max(0, preAuth - refunded);
             
-            document.getElementById('available-amount').innerText = available.toFixed(2) + ' ' + (currencyMap[testConfig.currency] || testConfig.currency);
-            document.getElementById('complete-amount').value = available.toFixed(2);
-            document.getElementById('complete-amount-error').classList.remove('show');
+            var availableEl = document.getElementById('available-amount');
+            var amountInput = document.getElementById('complete-amount');
+            var errorEl = document.getElementById('complete-amount-error');
+            
+            if (availableEl) availableEl.innerText = available.toFixed(2) + ' ' + (currencyMap[testConfig.currency] || testConfig.currency);
+            if (amountInput) amountInput.value = available.toFixed(2);
+            if (errorEl) errorEl.classList.remove('show');
             
             showScreen('screen-complete-amount');
         }
@@ -853,9 +883,13 @@
             var completed = parseFloat(testConfig.completedAmount) || 0;
             var available = Math.max(0, preAuth - refunded - completed);
             
-            document.getElementById('available-refund').innerText = available.toFixed(2) + ' ' + (currencyMap[testConfig.currency] || testConfig.currency);
-            document.getElementById('refund-amount').value = '';
-            document.getElementById('refund-amount-error').classList.remove('show');
+            var availableEl = document.getElementById('available-refund');
+            var amountInput = document.getElementById('refund-amount');
+            var errorEl = document.getElementById('refund-amount-error');
+            
+            if (availableEl) availableEl.innerText = available.toFixed(2) + ' ' + (currencyMap[testConfig.currency] || testConfig.currency);
+            if (amountInput) amountInput.value = '';
+            if (errorEl) errorEl.classList.remove('show');
             
             showScreen('screen-refund-amount');
         }
@@ -864,11 +898,11 @@
             var amountInput = document.getElementById('complete-amount');
             var errorEl = document.getElementById('complete-amount-error');
             var submitBtn = document.getElementById('complete-submit-btn');
-            var amount = amountInput.value.trim();
+            var amount = amountInput ? amountInput.value.trim() : '';
             
             if (!amount || !isValidAmount(amount)) {
-                errorEl.classList.add('show');
-                amountInput.focus();
+                if (errorEl) errorEl.classList.add('show');
+                if (amountInput) amountInput.focus();
                 return;
             }
             
@@ -877,9 +911,11 @@
                 return;
             }
             
-            var originalBtnText = submitBtn.innerText;
-            submitBtn.disabled = true;
-            submitBtn.innerText = 'Обработка...';
+            var originalBtnText = submitBtn ? submitBtn.innerText : 'Завершить заказ';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = 'Обработка...';
+            }
             
             try {
                 var response = await fetch('/api/complete-order', {
@@ -906,8 +942,10 @@
             } catch (error) {
                 console.error('Complete error:', error);
                 showResultToast(error.message || 'Не удалось завершить заказ', false);
-                submitBtn.disabled = false;
-                submitBtn.innerText = originalBtnText;
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = originalBtnText;
+                }
             }
         }
 
@@ -915,11 +953,11 @@
             var amountInput = document.getElementById('refund-amount');
             var errorEl = document.getElementById('refund-amount-error');
             var submitBtn = document.getElementById('refund-submit-btn');
-            var amount = amountInput.value.trim();
+            var amount = amountInput ? amountInput.value.trim() : '';
             
             if (!amount || !isValidAmount(amount)) {
-                errorEl.classList.add('show');
-                amountInput.focus();
+                if (errorEl) errorEl.classList.add('show');
+                if (amountInput) amountInput.focus();
                 return;
             }
             
@@ -928,9 +966,11 @@
                 return;
             }
             
-            var originalBtnText = submitBtn.innerText;
-            submitBtn.disabled = true;
-            submitBtn.innerText = 'Обработка...';
+            var originalBtnText = submitBtn ? submitBtn.innerText : 'Отменить сумму';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = 'Обработка...';
+            }
             
             try {
                 var response = await fetch('/api/refund-order', {
@@ -948,36 +988,40 @@
                     throw new Error(data.message || 'Ошибка при отмене');
                 }
                 
-                // Обновляем сумму отмены (накапливаем)
                 var currentRefund = parseFloat(testConfig.refundedAmount) || 0;
                 testConfig.refundedAmount = (currentRefund + parseFloat(amount)).toFixed(2);
                 saveToSession();
                 
-                // Показываем результат в тосте (не закрывая форму)
                 showResultToast('Отмена на сумму ' + amount + ' ' + (currencyMap[testConfig.currency] || testConfig.currency) + ' выполнена успешно!', true);
                 
-                // Разблокируем кнопку для повторной попытки
-                submitBtn.disabled = false;
-                submitBtn.innerText = originalBtnText;
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = originalBtnText;
+                }
                 
-                // Обновляем доступную сумму
                 var preAuth = parseFloat(testConfig.preAuthAmount) || 0;
                 var refunded = parseFloat(testConfig.refundedAmount) || 0;
                 var completed = parseFloat(testConfig.completedAmount) || 0;
                 var available = Math.max(0, preAuth - refunded - completed);
-                document.getElementById('available-refund').innerText = available.toFixed(2) + ' ' + (currencyMap[testConfig.currency] || testConfig.currency);
+                
+                var availableEl = document.getElementById('available-refund');
+                if (availableEl) availableEl.innerText = available.toFixed(2) + ' ' + (currencyMap[testConfig.currency] || testConfig.currency);
                 
             } catch (error) {
                 console.error('Refund error:', error);
                 showResultToast(error.message || 'Не удалось отменить сумму', false);
-                submitBtn.disabled = false;
-                submitBtn.innerText = originalBtnText;
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = originalBtnText;
+                }
             }
         }
 
         function showErrorModal(message) {
             var modal = document.getElementById('errorModal');
             var errorMsg = document.getElementById('errorMsg');
+            
+            if (!modal || !errorMsg) return;
             
             errorMsg.innerText = message;
             modal.style.display = 'flex';
@@ -988,24 +1032,34 @@
         }
 
         function closeErrorModal() {
-            document.getElementById('errorModal').style.display = 'none';
+            var modal = document.getElementById('errorModal');
+            if (modal) modal.style.display = 'none';
         }
 
         function showScreen(screenId) {
             var screens = document.getElementsByClassName('screen');
             for (var i = 0; i < screens.length; i++) screens[i].classList.remove('active');
-            document.getElementById(screenId).classList.add('active');
+            var targetScreen = document.getElementById(screenId);
+            if (targetScreen) targetScreen.classList.add('active');
             clearErrors();
             resetProcessScreen();
         }
 
         function resetProcessScreen() {
-            document.getElementById('loader').style.display = 'none';
-            document.getElementById('status').innerText = 'Отправка запроса...';
-            document.getElementById('status').style.color = '#666';
-            document.getElementById('backBtn').style.display = 'none';
-            document.getElementById('payBtn').style.display = 'none';
-            document.getElementById('resultDetails').style.display = 'none';
+            var loader = document.getElementById('loader');
+            var status = document.getElementById('status');
+            var backBtn = document.getElementById('backBtn');
+            var payBtn = document.getElementById('payBtn');
+            var resultDetails = document.getElementById('resultDetails');
+            
+            if (loader) loader.style.display = 'none';
+            if (status) {
+                status.innerText = 'Отправка запроса...';
+                status.style.color = '#666';
+            }
+            if (backBtn) backBtn.style.display = 'none';
+            if (payBtn) payBtn.style.display = 'none';
+            if (resultDetails) resultDetails.style.display = 'none';
         }
 
         function clearErrors() {
@@ -1018,6 +1072,7 @@
         }
 
         function validateAmount(input) {
+            if (!input) return;
             input.value = input.value.replace(/[^0-9.]/g, '');
             var parts = input.value.split('.');
             if (parts.length > 2) input.value = parts[0] + '.' + parts[1];
@@ -1027,6 +1082,7 @@
         }
 
         function formatAmount(input) {
+            if (!input) return;
             var value = input.value.trim();
             if (value && !value.includes('.')) input.value = value + '.00';
             else if (value) {
@@ -1057,8 +1113,10 @@
             testConfig.stageType = stageType;
             
             if (stageType === 'two-stage' || (testConfig.registrationType === 'no-binding' && stageType === 'one-stage')) {
-                document.getElementById('amount').value = '';
-                document.getElementById('currency').value = 'BYN';
+                var amountInput = document.getElementById('amount');
+                var currencySelect = document.getElementById('currency');
+                if (amountInput) amountInput.value = '';
+                if (currencySelect) currencySelect.value = 'BYN';
                 showScreen('screen-ecom-input');
             } else {
                 testConfig.amount = '1.00';
@@ -1071,12 +1129,12 @@
             var amountInput = document.getElementById('amount');
             var currencySelect = document.getElementById('currency');
             var errorEl = document.getElementById('amount-error');
-            var amount = amountInput.value.trim();
-            var currency = currencySelect.value;
+            var amount = amountInput ? amountInput.value.trim() : '';
+            var currency = currencySelect ? currencySelect.value : 'BYN';
             
             if (!amount || !isValidAmount(amount)) {
-                errorEl.classList.add('show');
-                amountInput.focus();
+                if (errorEl) errorEl.classList.add('show');
+                if (amountInput) amountInput.focus();
                 return;
             }
             testConfig.amount = amount;
@@ -1096,14 +1154,16 @@
 
             var regText = testConfig.registrationType === 'with-binding' ? 'С привязкой' : 'Без привязки';
             var stageText = testConfig.stageType === 'one-stage' ? 'Одностадийный' : 'Двухстадийный';
-            title.innerText = regText + ' / ' + stageText;
+            if (title) title.innerText = regText + ' / ' + stageText;
 
-            status.innerText = 'Отправка запроса в Альфа-Банк...';
-            status.style.color = '#666';
-            loader.style.display = 'block';
-            backBtn.style.display = 'none';
-            payBtn.style.display = 'none';
-            resultDetails.style.display = 'none';
+            if (status) {
+                status.innerText = 'Отправка запроса в Альфа-Банк...';
+                status.style.color = '#666';
+            }
+            if (loader) loader.style.display = 'block';
+            if (backBtn) backBtn.style.display = 'none';
+            if (payBtn) payBtn.style.display = 'none';
+            if (resultDetails) resultDetails.style.display = 'none';
 
             try {
                 var response = await fetch('/api/test-alfa', {
@@ -1131,27 +1191,37 @@
                 testConfig.refundedAmount = '';
                 saveToSession();
 
-                document.getElementById('res-order').innerText = data.orderNumber;
-                document.getElementById('res-amount').innerText = data.amount + ' ' + data.currency;
-                document.getElementById('res-currency').innerText = data.currency;
-                resultDetails.style.display = 'block';
+                var resOrder = document.getElementById('res-order');
+                var resAmount = document.getElementById('res-amount');
+                var resCurrency = document.getElementById('res-currency');
+                
+                if (resOrder) resOrder.innerText = data.orderNumber;
+                if (resAmount) resAmount.innerText = data.amount + ' ' + data.currency;
+                if (resCurrency) resCurrency.innerText = data.currency;
+                if (resultDetails) resultDetails.style.display = 'block';
 
-                loader.style.display = 'none';
-                status.innerText = '✓ Заказ зарегистрирован';
-                status.style.color = 'green';
-                backBtn.style.display = 'inline-block';
+                if (loader) loader.style.display = 'none';
+                if (status) {
+                    status.innerText = '✓ Заказ зарегистрирован';
+                    status.style.color = 'green';
+                }
+                if (backBtn) backBtn.style.display = 'inline-block';
 
                 if (data.formUrl) {
-                    payBtn.style.display = 'inline-block';
-                    payBtn.onclick = function() { window.location.href = data.formUrl; };
+                    if (payBtn) {
+                        payBtn.style.display = 'inline-block';
+                        payBtn.onclick = function() { window.location.href = data.formUrl; };
+                    }
                 }
 
             } catch (error) {
                 console.error('Test error:', error);
-                loader.style.display = 'none';
-                status.innerText = '✗ Ошибка: ' + error.message;
-                status.style.color = 'red';
-                backBtn.style.display = 'inline-block';
+                if (loader) loader.style.display = 'none';
+                if (status) {
+                    status.innerText = '✗ Ошибка: ' + error.message;
+                    status.style.color = 'red';
+                }
+                if (backBtn) backBtn.style.display = 'inline-block';
                 showErrorModal(error.message);
             }
         }
