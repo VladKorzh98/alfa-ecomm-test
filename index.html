@@ -298,6 +298,25 @@
                 opacity: 1;
             }
         }
+
+        .order-info {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            text-align: left;
+        }
+
+        .order-info-label {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .order-info-value {
+            font-family: 'Courier New', monospace;
+            font-size: 18px;
+            letter-spacing: 1px;
+        }
     </style>
 </head>
 <body>
@@ -628,12 +647,12 @@
                 statusBox.classList.add('error');
             }
             
-            // Уникальный номер заказа (orderId) - приоритет: из API > из config
+            // Уникальный номер заказа (orderId) - из ответа API
             var uniqueOrderId = data.orderId || testConfig.orderId || '-';
             console.log('Displaying orderId:', uniqueOrderId);
             document.getElementById('st-order-id').innerText = uniqueOrderId;
             
-            // Номер заказа (orderNumber) - приоритет: из API > из config
+            // Номер заказа (orderNumber) - из ответа API
             var orderNum = data.orderNumber || testConfig.orderNumber || '-';
             console.log('Displaying orderNumber:', orderNum);
             document.getElementById('st-order-number').innerText = orderNum;
@@ -817,14 +836,14 @@
                     throw new Error(data.message || 'Ошибка сервера: ' + response.status);
                 }
 
-                // ВАЖНО: Сохраняем orderId и orderNumber из ответа API
+                // Сохраняем orderId (от банка) и orderNumber (наш сгенерированный)
                 testConfig.orderId = data.orderId;
                 testConfig.orderNumber = data.orderNumber;
                 
                 console.log('Saved testConfig.orderId:', testConfig.orderId);
                 console.log('Saved testConfig.orderNumber:', testConfig.orderNumber);
 
-                document.getElementById('res-order').innerText = data.orderNumber || '-';
+                document.getElementById('res-order').innerText = data.orderNumber;
                 document.getElementById('res-amount').innerText = data.amount + ' ' + data.currency;
                 document.getElementById('res-currency').innerText = data.currency;
                 resultDetails.style.display = 'block';
