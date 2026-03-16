@@ -509,7 +509,6 @@
             orderNumber: ''
         };
 
-        // ИЗМЕНЕНО: статус 1 = "Подтвержден", статус 2 = "Завершен"
         var statusMap = {
             '0': { text: 'Заказ зарегистрирован, не оплачен', class: 'status-0' },
             '1': { text: 'Подтвержден', class: 'status-1' },
@@ -542,12 +541,23 @@
             if (savedOrderId) testConfig.orderId = savedOrderId;
             if (savedOrderNumber) testConfig.orderNumber = savedOrderNumber;
             if (savedStageType) testConfig.stageType = savedStageType;
+            
+            console.log('=== RESTORED FROM SESSION ===');
+            console.log('orderId:', testConfig.orderId);
+            console.log('orderNumber:', testConfig.orderNumber);
+            console.log('stageType:', testConfig.stageType);
+            console.log('============================');
         }
 
         function saveToSession() {
             if (testConfig.orderId) sessionStorage.setItem('orderId', testConfig.orderId);
             if (testConfig.orderNumber) sessionStorage.setItem('orderNumber', testConfig.orderNumber);
             if (testConfig.stageType) sessionStorage.setItem('stageType', testConfig.stageType);
+            console.log('=== SAVED TO SESSION ===');
+            console.log('orderId:', testConfig.orderId);
+            console.log('orderNumber:', testConfig.orderNumber);
+            console.log('stageType:', testConfig.stageType);
+            console.log('========================');
         }
 
         function clearSession() {
@@ -607,6 +617,12 @@
             
             if (orderId || mdOrder) {
                 var actualOrderId = orderId || mdOrder;
+                console.log('=== RETURN URL DETECTED ===');
+                console.log('orderId from URL:', actualOrderId);
+                console.log('testConfig.orderId:', testConfig.orderId);
+                console.log('testConfig.stageType:', testConfig.stageType);
+                console.log('=========================');
+                
                 showScreen('screen-status');
                 checkOrderStatus(actualOrderId);
             }
@@ -633,6 +649,12 @@
                 });
 
                 var data = await response.json();
+                console.log('=== STATUS API RESPONSE ===');
+                console.log('orderStatus:', data.orderStatus);
+                console.log('orderId:', data.orderId);
+                console.log('orderNumber:', data.orderNumber);
+                console.log('testConfig.stageType:', testConfig.stageType);
+                console.log('===========================');
 
                 if (!response.ok || data.error) {
                     throw new Error(data.message || 'Ошибка в ответе API');
@@ -700,11 +722,18 @@
                 document.getElementById('error-description-block').style.display = 'none';
             }
             
-            // ИЗМЕНЕНО: Кнопки показываем для статуса 1 (Подтвержден) + двухстадийный
+            // ПОКАЗЫВАЕМ кнопки для статуса 1 (Подтвержден) + двухстадийный
+            console.log('Checking buttons visibility:');
+            console.log('- stageType:', testConfig.stageType);
+            console.log('- status:', status);
+            console.log('- show buttons:', testConfig.stageType === 'two-stage' && status === '1');
+            
             if (testConfig.stageType === 'two-stage' && status === '1') {
                 document.getElementById('action-buttons').style.display = 'block';
+                console.log('Buttons SHOWN!');
             } else {
                 document.getElementById('action-buttons').style.display = 'none';
+                console.log('Buttons HIDDEN');
             }
         }
 
