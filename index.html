@@ -69,6 +69,14 @@
             color: #ef3124;
         }
 
+        .btn-pay {
+            background-color: #28a745;
+        }
+
+        .btn-pay:hover {
+            background-color: #218838;
+        }
+
         .screen {
             display: none;
         }
@@ -173,6 +181,19 @@
         .error-message.show {
             display: block;
         }
+
+        .result-details {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        .result-details strong {
+            color: #333;
+        }
     </style>
 </head>
 <body>
@@ -217,14 +238,14 @@
             <button class="btn btn-secondary" onclick="checkAndProceed('two-stage')">Двухстадийный</button>
         </div>
 
-        <!-- Экран 5: Ввод суммы и валюты (только для без привязки + одностадийный) -->
+        <!-- Экран 5: Ввод суммы и валюты -->
         <div id="screen-ecom-input" class="screen">
             <div class="breadcrumb"><span onclick="showScreen('screen-ecom-stage')">← Назад</span></div>
             <h1>Параметры платежа</h1>
             
             <div class="form-group">
                 <label for="amount">Сумма платежа</label>
-                <input type="text" id="amount" placeholder="0.00" oninput="validateAmount(this)">
+                <input type="text" id="amount" placeholder="0.00" oninput="validateAmount(this)" onblur="formatAmount(this)">
                 <div class="form-hint">Введите сумму с двумя знаками после запятой (например: 10.50)</div>
                 <div class="error-message" id="amount-error">Некорректная сумма. Используйте формат: 0.00</div>
             </div>
@@ -257,8 +278,15 @@
             <h1 id="process-title">Тестирование</h1>
             <div class="loader" id="loader"></div>
             <p id="status">Отправка запроса...</p>
-            <p id="payment-details" style="color:#666;font-size:14px;margin:10px 0"></p>
-            <button class="btn btn-secondary" onclick="showScreen('screen-ecom-stage')" style="display:none" id="backBtn">Вернуться</button>
+            
+            <div class="result-details" id="resultDetails" style="display:none">
+                <div><strong>Заказ:</strong> <span id="res-order"></span></div>
+                <div><strong>Сумма:</strong> <span id="res-amount"></span></div>
+                <div><strong>Валюта:</strong> <span id="res-currency"></span></div>
+            </div>
+
+            <button class="btn btn-secondary" id="backBtn" onclick="showScreen('screen-ecom-stage')" style="display:none">Вернуться</button>
+            <button class="btn btn-pay" id="payBtn" style="display:none">Перейти к оплате →</button>
         </div>
 
     </div>
@@ -289,48 +317,60 @@
                 screens[i].classList.remove('active');
             }
             document.getElementById(screenId).classList.add('active');
-            
-            // Очищаем ошибки при переходе
             clearErrors();
+            resetProcessScreen();
+        }
+
+        // Сброс экрана процесса
+        function resetProcessScreen() {
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('status').innerText = 'Отправка запроса...';
+            document.getElementById('status').style.color = '#666';
+            document.getElementById('backBtn').style.display = 'none';
+            document.getElementById('payBtn').style.display = 'none';
+            document.getElementById('resultDetails').style.display = 'none';
         }
 
         // Очистка ошибок
         function clearErrors() {
             var errorEl = document.getElementById('amount-error');
-            if (errorEl) {
-                errorEl.classList.remove('show');
-            }
+            if (errorEl) errorEl.classList.remove('show');
         }
 
-        // Валидация суммы
+        // Валидация суммы при вводе
         function validateAmount(input) {
-            // Разрешаем только цифры и точку
             input.value = input.value.replace(/[^0-9.]/g, '');
-            
-            // Проверяем формат (максимум 2 знака после запятой)
-            var value = input.value;
-            var parts = value.split('.');
-            
+            var parts = input.value.split('.');
             if (parts.length > 2) {
                 input.value = parts[0] + '.' + parts[1];
             }
-            
             if (parts.length === 2 && parts[1].length > 2) {
                 input.value = parts[0] + '.' + parts[1].substring(0, 2);
             }
         }
 
+        // Форматирование суммы при потере фокуса
+        function formatAmount(input) {
+            var value = input.value.trim();
+            if (value && !value.includes('.')) {
+                input.value = value + '.00';
+            } else if (value) {
+                var parts = value.split('.');
+                if (parts[1] && parts[1].length === 1) {
+                    input.value = parts[0] + '.' + parts[1] + '0';
+                }
+            }
+        }
+
         // Проверка корректности суммы
         function isValidAmount(amount) {
-            var regex = /^\d+(\.\d{1,2})?$/;
+            var regex = /^\d+(\.\d{2})?$/;
             return regex.test(amount) && parseFloat(amount) > 0;
         }
 
-        // Выбор типа операции (ECOM / P2P)
+        // Выбор типа операции
         function selectOperationType(type) {
             testConfig.operationType = type;
-            console.log('Operation type selected:', type);
-            
             if (type === 'ecom') {
                 showScreen('screen-ecom-type');
             } else if (type === 'p2p') {
@@ -338,25 +378,22 @@
             }
         }
 
-        // Выбор типа регистрации (с привязкой / без)
+        // Выбор типа регистрации
         function selectEcomType(regType) {
             testConfig.registrationType = regType;
-            console.log('Registration type selected:', regType);
             showScreen('screen-ecom-stage');
         }
 
-        // Проверка и переход (к форме ввода или сразу к тесту)
+        // Проверка и переход
         function checkAndProceed(stageType) {
             testConfig.stageType = stageType;
-            
-            // Если "без привязки" + "одностадийный" - показываем форму ввода
             if (testConfig.registrationType === 'no-binding' && stageType === 'one-stage') {
-                // Очищаем поля
                 document.getElementById('amount').value = '';
                 document.getElementById('currency').value = 'BYN';
                 showScreen('screen-ecom-input');
             } else {
-                // Для остальных случаев - сразу запускаем тест
+                testConfig.amount = '1.00';
+                testConfig.currency = 'BYN';
                 runEcomTest();
             }
         }
@@ -370,20 +407,14 @@
             var amount = amountInput.value.trim();
             var currency = currencySelect.value;
             
-            // Валидация
             if (!amount || !isValidAmount(amount)) {
                 errorEl.classList.add('show');
                 amountInput.focus();
                 return;
             }
             
-            // Сохраняем данные
             testConfig.amount = amount;
             testConfig.currency = currency;
-            
-            console.log('Payment data:', testConfig);
-            
-            // Запускаем тест
             runEcomTest();
         }
 
@@ -393,26 +424,21 @@
             
             var title = document.getElementById('process-title');
             var status = document.getElementById('status');
-            var details = document.getElementById('payment-details');
             var loader = document.getElementById('loader');
             var backBtn = document.getElementById('backBtn');
+            var payBtn = document.getElementById('payBtn');
+            var resultDetails = document.getElementById('resultDetails');
 
-            // Формируем заголовок
             var regText = testConfig.registrationType === 'with-binding' ? 'С привязкой' : 'Без привязки';
             var stageText = testConfig.stageType === 'one-stage' ? 'Одностадийный' : 'Двухстадийный';
             title.innerText = regText + ' / ' + stageText;
-
-            // Показываем детали платежа если есть
-            if (testConfig.amount && testConfig.currency) {
-                details.innerText = testConfig.amount + ' ' + testConfig.currency;
-            } else {
-                details.innerText = '';
-            }
 
             status.innerText = 'Отправка запроса в Альфа-Банк...';
             status.style.color = '#666';
             loader.style.display = 'block';
             backBtn.style.display = 'none';
+            payBtn.style.display = 'none';
+            resultDetails.style.display = 'none';
 
             try {
                 var response = await fetch('/api/test-alfa', {
@@ -427,28 +453,35 @@
                     })
                 });
 
-                console.log('Response status:', response.status);
                 var data = await response.json();
-                console.log('Response ', data);
 
                 if (!response.ok || data.error) {
                     throw new Error(data.message || 'Ошибка сервера: ' + response.status);
                 }
 
+                // Показываем детали результата
+                document.getElementById('res-order').innerText = data.orderId || '-';
+                document.getElementById('res-amount').innerText = data.amount + ' ' + data.currency;
+                document.getElementById('res-currency').innerText = data.currency;
+                resultDetails.style.display = 'block';
+
                 loader.style.display = 'none';
-                status.innerText = '✓ ' + (data.message || 'Операция выполнена успешно');
+                status.innerText = '✓ ' + (data.message || 'Заказ зарегистрирован');
                 status.style.color = 'green';
                 backBtn.style.display = 'inline-block';
 
-                // Если есть ссылка на оплату
-                if (data.paymentUrl) {
-                    status.innerHTML += '<br><br><a href="' + data.paymentUrl + '" target="_blank" style="color:#ef3124">Перейти к оплате →</a>';
+                // Кнопка перехода на оплату
+                if (data.formUrl) {
+                    payBtn.style.display = 'inline-block';
+                    payBtn.onclick = function() {
+                        window.location.href = data.formUrl;
+                    };
                 }
 
             } catch (error) {
                 console.error('Test error:', error);
                 loader.style.display = 'none';
-                status.innerText = '✗ Ошибка выполнения';
+                status.innerText = '✗ Ошибка: ' + error.message;
                 status.style.color = 'red';
                 backBtn.style.display = 'inline-block';
                 
