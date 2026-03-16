@@ -473,7 +473,6 @@
                         </div>
                     </div>
                     
-                    <!-- Кнопки действий для двухстадийных платежей (статус 2) -->
                     <div class="action-buttons" id="action-buttons" style="display:none">
                         <div class="action-buttons-title">Действия с заказом:</div>
                         <div class="button-group">
@@ -510,11 +509,11 @@
             orderNumber: ''
         };
 
-        // ИЗМЕНЕНО: статус 2 теперь "Подтвержден"
+        // ИЗМЕНЕНО: статус 1 = "Подтвержден", статус 2 = "Завершен"
         var statusMap = {
             '0': { text: 'Заказ зарегистрирован, не оплачен', class: 'status-0' },
-            '1': { text: 'Заказ авторизован, не завершен', class: 'status-1' },
-            '2': { text: 'Подтвержден', class: 'status-2' },
+            '1': { text: 'Подтвержден', class: 'status-1' },
+            '2': { text: 'Завершен', class: 'status-2' },
             '3': { text: 'Авторизация отменена', class: 'status-3' },
             '4': { text: 'Возврат совершен', class: 'status-4' },
             '5': { text: 'Инициирована 3D-Secure', class: 'status-5' },
@@ -540,15 +539,9 @@
             var savedOrderNumber = sessionStorage.getItem('orderNumber');
             var savedStageType = sessionStorage.getItem('stageType');
             
-            if (savedOrderId) {
-                testConfig.orderId = savedOrderId;
-            }
-            if (savedOrderNumber) {
-                testConfig.orderNumber = savedOrderNumber;
-            }
-            if (savedStageType) {
-                testConfig.stageType = savedStageType;
-            }
+            if (savedOrderId) testConfig.orderId = savedOrderId;
+            if (savedOrderNumber) testConfig.orderNumber = savedOrderNumber;
+            if (savedStageType) testConfig.stageType = savedStageType;
         }
 
         function saveToSession() {
@@ -700,7 +693,6 @@
                 document.getElementById('row-auth').style.display = 'none';
             }
             
-            // Описание ошибки для статуса 6
             if (status === '6' && data.actionCodeDescription) {
                 document.getElementById('error-description-block').style.display = 'block';
                 document.getElementById('st-error-description').innerText = data.actionCodeDescription;
@@ -708,8 +700,8 @@
                 document.getElementById('error-description-block').style.display = 'none';
             }
             
-            // ИЗМЕНЕНО: Кнопки действий показываем ТОЛЬКО для статуса 2 (Подтвержден) + двухстадийный
-            if (testConfig.stageType === 'two-stage' && status === '2') {
+            // ИЗМЕНЕНО: Кнопки показываем для статуса 1 (Подтвержден) + двухстадийный
+            if (testConfig.stageType === 'two-stage' && status === '1') {
                 document.getElementById('action-buttons').style.display = 'block';
             } else {
                 document.getElementById('action-buttons').style.display = 'none';
