@@ -18,11 +18,17 @@
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             display: flex;
             align-items: center;
+            gap: 15px;
         }
 
-        .logo {
+        .logo-container {
+            display: flex;
+            align-items: center;
+        }
+
+        .logo-svg {
+            width: 40px;
             height: 40px;
-            margin-right: 20px;
         }
 
         .brand-name {
@@ -343,7 +349,16 @@
 <body>
 
     <header>
-        <img src="https://cdn.worldvectorlogo.com/logos/alfa-bank.svg" alt="Alfa Bank" class="logo" onerror="this.style.display='none'">
+        <div class="logo-container">
+            <svg class="logo-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <!-- Буква А -->
+                <path d="M 50 10 L 20 85 L 32 85 L 38 68 L 62 68 L 68 85 L 80 85 Z" fill="#EF3124"/>
+                <!-- Поперечная черта буквы А -->
+                <rect x="40" y="52" width="20" height="8" fill="#EF3124"/>
+                <!-- Линия подчеркивания -->
+                <rect x="20" y="90" width="60" height="5" fill="#EF3124"/>
+            </svg>
+        </div>
         <div class="brand-name">API Testing</div>
     </header>
 
@@ -875,11 +890,9 @@
             showScreen('screen-ecom-stage');
         }
 
-        // ИЗМЕНЕНО: Для двухстадийных также показываем ввод суммы
         function checkAndProceed(stageType) {
             testConfig.stageType = stageType;
             
-            // Для двухстадийных И для одностадийных без привязки показываем ввод суммы
             if (stageType === 'two-stage' || (testConfig.registrationType === 'no-binding' && stageType === 'one-stage')) {
                 document.getElementById('amount').value = '';
                 document.getElementById('currency').value = 'BYN';
