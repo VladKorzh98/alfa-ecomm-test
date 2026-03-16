@@ -511,9 +511,13 @@
                         <span class="result-label">Номер заказа:</span>
                         <span class="result-value" id="st-order-number"></span>
                     </div>
-                    <div class="result-row">
+                    <div class="result-row" id="row-preauth-amount">
                         <span class="result-label">Сумма преавторизации:</span>
                         <span class="result-value" id="st-preauth-amount"></span>
+                    </div>
+                    <div class="result-row" id="row-amount" style="display:none">
+                        <span class="result-label">Сумма:</span>
+                        <span class="result-value" id="st-amount"></span>
                     </div>
                     <div class="result-row" id="row-completed-amount" style="display:none">
                         <span class="result-label">Сумма завершения:</span>
@@ -793,14 +797,19 @@
             if (currencyEl) currencyEl.innerText = currencyName;
             
             var rowPreAuth = document.getElementById('row-preauth-amount');
+            var rowAmount = document.getElementById('row-amount');
             var rowCompleted = document.getElementById('row-completed-amount');
             var rowRefunded = document.getElementById('row-refunded-amount');
             var preAuthEl = document.getElementById('st-preauth-amount');
+            var amountEl = document.getElementById('st-amount');
             var completedEl = document.getElementById('st-completed-amount');
             var refundedEl = document.getElementById('st-refunded-amount');
             
             if (testConfig.stageType === 'two-stage') {
+                // Для двухстадийных
                 if (rowPreAuth) rowPreAuth.style.display = 'flex';
+                if (rowAmount) rowAmount.style.display = 'none';
+                
                 var preAuthAmount = testConfig.preAuthAmount || (data.amount ? (parseFloat(data.amount) / 100).toFixed(2) : '-');
                 if (preAuthEl) preAuthEl.innerText = preAuthAmount + ' ' + currencyName;
                 
@@ -818,9 +827,16 @@
                     if (rowRefunded) rowRefunded.style.display = 'none';
                 }
             } else {
+                // Для одностадийных
                 if (rowPreAuth) rowPreAuth.style.display = 'none';
+                if (rowAmount) rowAmount.style.display = 'flex';
                 if (rowCompleted) rowCompleted.style.display = 'none';
                 if (rowRefunded) rowRefunded.style.display = 'none';
+                
+                if (amountEl) {
+                    var amount = data.amount ? (parseFloat(data.amount) / 100).toFixed(2) : '-';
+                    amountEl.innerText = amount + ' ' + currencyName;
+                }
             }
             
             if (cardEl) {
