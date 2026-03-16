@@ -77,6 +77,13 @@
             background-color: #218838;
         }
 
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 14px;
+            width: auto;
+            margin: 5px 0;
+        }
+
         .screen {
             display: none;
         }
@@ -225,6 +232,24 @@
             display: flex;
             align-items: center;
             gap: 8px;
+        }
+
+        .action-buttons {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #dee2e6;
+        }
+
+        .action-buttons-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
         }
 
         .copy-btn {
@@ -447,6 +472,15 @@
                             <div id="st-error-description"></div>
                         </div>
                     </div>
+                    
+                    <!-- Кнопки действий для двухстадийных платежей -->
+                    <div class="action-buttons" id="action-buttons" style="display:none">
+                        <div class="action-buttons-title">Действия с заказом:</div>
+                        <div class="button-group">
+                            <button class="btn btn-small btn-pay" onclick="completeTwoStageOrder()">✓ Завершить</button>
+                            <button class="btn btn-small btn-secondary" onclick="cancelTwoStageOrder()">✗ Отменить</button>
+                        </div>
+                    </div>
                 </div>
 
                 <button class="btn" onclick="clearSessionAndGoHome()">Новый платеж</button>
@@ -503,6 +537,7 @@
         function restoreFromSession() {
             var savedOrderId = sessionStorage.getItem('orderId');
             var savedOrderNumber = sessionStorage.getItem('orderNumber');
+            var savedStageType = sessionStorage.getItem('stageType');
             
             if (savedOrderId) {
                 testConfig.orderId = savedOrderId;
@@ -511,6 +546,10 @@
             if (savedOrderNumber) {
                 testConfig.orderNumber = savedOrderNumber;
                 console.log('Restored orderNumber from session:', testConfig.orderNumber);
+            }
+            if (savedStageType) {
+                testConfig.stageType = savedStageType;
+                console.log('Restored stageType from session:', testConfig.stageType);
             }
         }
 
@@ -521,14 +560,19 @@
             if (testConfig.orderNumber) {
                 sessionStorage.setItem('orderNumber', testConfig.orderNumber);
             }
-            console.log('Saved to session:', { orderId: testConfig.orderId, orderNumber: testConfig.orderNumber });
+            if (testConfig.stageType) {
+                sessionStorage.setItem('stageType', testConfig.stageType);
+            }
+            console.log('Saved to session:', testConfig);
         }
 
         function clearSession() {
             sessionStorage.removeItem('orderId');
             sessionStorage.removeItem('orderNumber');
+            sessionStorage.removeItem('stageType');
             testConfig.orderId = '';
             testConfig.orderNumber = '';
+            testConfig.stageType = '';
         }
 
         function clearSessionAndGoHome() {
@@ -599,8 +643,7 @@
             
             console.log('=== ПРОВЕРКА СТАТУСА ===');
             console.log('orderId:', orderId);
-            console.log('testConfig.orderId:', testConfig.orderId);
-            console.log('testConfig.orderNumber:', testConfig.orderNumber);
+            console.log('testConfig:', testConfig);
             
             loader.style.display = 'block';
             text.style.display = 'block';
@@ -661,11 +704,9 @@
                 statusBox.classList.add('error');
             }
             
-            // Показываем orderId из ответа API (от банка)
             console.log('Displaying orderId from API:', data.orderId);
             document.getElementById('st-order-id').innerText = data.orderId || testConfig.orderId || '-';
             
-            // Показываем orderNumber (наш)
             console.log('Displaying orderNumber:', data.orderNumber);
             document.getElementById('st-order-number').innerText = data.orderNumber || '-';
             
@@ -695,6 +736,87 @@
                 document.getElementById('st-error-description').innerText = data.actionCodeDescription;
             } else {
                 document.getElementById('error-description-block').style.display = 'none';
+            }
+            
+            // Показываем кнопки действий для двухстадийных платежей (статус 1 - авторизован)
+            if (testConfig.stageType === 'two-stage' && status === '1') {
+                document.getElementById('action-buttons').style.display = 'block';
+            } else {
+                document.getElementById('action-buttons').style.display = 'none';
+            }
+        }
+
+        // Завершение двухстадийного заказа
+        async function completeTwoStageOrder() {
+            if (!testConfig.orderId) {
+                alert('Ошибка: нет orderId');
+                return;
+            }
+            
+            if (!confirm('Завершить двухстадийный заказ?')) {
+                return;
+            }
+            
+            try {
+                var response = await fetch('/api/complete-order', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ 
+                        orderId: testConfig.orderId 
+                    })
+                });
+                
+                var data = await response.json();
+                
+                if (!response.ok || data.error) {
+                    throw new Error(data.message || 'Ошибка при завершении заказа');
+                }
+                
+                alert('Заказ успешно завершён!');
+                // Перезагружаем статус
+                checkOrderStatus(testConfig.orderId);
+                
+            } catch (error) {
+                console.error('Complete error:', error);
+                document.getElementById('errorMsg').innerText = error.message;
+                document.getElementById('errorModal').style.display = 'flex';
+            }
+        }
+
+        // Отмена двухстадийного заказа
+        async function cancelTwoStageOrder() {
+            if (!testConfig.orderId) {
+                alert('Ошибка: нет orderId');
+                return;
+            }
+            
+            if (!confirm('Отменить двухстадийный заказ?')) {
+                return;
+            }
+            
+            try {
+                var response = await fetch('/api/cancel-order', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ 
+                        orderId: testConfig.orderId 
+                    })
+                });
+                
+                var data = await response.json();
+                
+                if (!response.ok || data.error) {
+                    throw new Error(data.message || 'Ошибка при отмене заказа');
+                }
+                
+                alert('Заказ успешно отменён!');
+                // Перезагружаем статус
+                checkOrderStatus(testConfig.orderId);
+                
+            } catch (error) {
+                console.error('Cancel error:', error);
+                document.getElementById('errorMsg').innerText = error.message;
+                document.getElementById('errorModal').style.display = 'flex';
             }
         }
 
