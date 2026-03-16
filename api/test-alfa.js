@@ -5,14 +5,14 @@ const CURRENCY_CODES = {
   'RUB': '643'
 };
 
-// Генерация orderNumber (макс 10 символов, буквы и цифры)
+// Генерация orderNumber (ровно 10 символов, буквы и цифры)
 function generateOrderNumber() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let result = '';
   for (let i = 0; i < 10; i++) {
     result += chars.charAt(Math.floor(Math.random() * chars.length));
   }
-  return result; // Пример: A7K9M2X1B5
+  return result; // Пример: XF0ZGUMZKL
 }
 
 function toMinorUnits(amount) {
@@ -33,7 +33,7 @@ export default async function handler(req, res) {
     if (!amount || !/^\d+(\.\d{1,2})?$/.test(amount)) {
       return res.status(400).json({
         error: 'invalid_amount',
-        message: 'Некорректная сумма. Используйте формат: 0.00'
+        message: 'Некорректная сумма'
       });
     }
 
@@ -44,7 +44,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // ГЕНЕРИРУЕМ orderNumber (наш номер заказа)
+    // ГЕНЕРИРУЕМ наш orderNumber
     const orderNumber = generateOrderNumber();
     const amountMinor = toMinorUnits(amount);
     const currencyCode = CURRENCY_CODES[currency];
@@ -53,12 +53,13 @@ export default async function handler(req, res) {
     const protocol = process.env.VERCEL_ENV === 'production' ? 'https' : 'http';
     const returnUrl = `${protocol}://${host}/`;
 
+    // Формируем параметры запроса
     const params = new URLSearchParams();
     params.append('userName', process.env.ALFA_USERNAME || 'ABB_3-api');
     params.append('password', process.env.ALFA_PASSWORD || 'ABB_3*?1');
     params.append('amount', amountMinor);
     params.append('currency', currencyCode);
-    params.append('orderNumber', orderNumber);  // ОТПРАВЛЯЕМ наш сгенерированный orderNumber
+    params.append('orderNumber', orderNumber);  // ОТПРАВЛЯЕМ наш orderNumber!
     params.append('returnUrl', returnUrl);
     
     if (stageType === 'one-stage') {
@@ -69,7 +70,11 @@ export default async function handler(req, res) {
       params.append('clientId', 'client_' + Date.now());
     }
 
-    console.log('Sending to Alfa Bank:', { orderNumber, amountMinor, currencyCode });
+    console.log('Sending to Alfa Bank:', { 
+      orderNumber: orderNumber,
+      amountMinor: amountMinor, 
+      currencyCode: currencyCode 
+    });
 
     try {
       const bankResponse = await fetch('https://abby.rbsuat.com/payment/rest/register.do', {
@@ -86,13 +91,13 @@ export default async function handler(req, res) {
       }
 
       // Возвращаем:
-      // - orderId (от банка, уникальный ID)
-      // - orderNumber (наш сгенерированный, который отправили)
+      // - orderId: уникальный ID от банка (из ответа)
+      // - orderNumber: НАШ сгенерированный (который отправили)
       return res.status(200).json({
         status: 'success',
         message: 'Заказ зарегистрирован',
-        orderId: bankData.orderId,        // Уникальный ID от банка (сохраняем для статуса)
-        orderNumber: orderNumber,          // Наш orderNumber (показываем пользователю)
+        orderId: bankData.orderId,      // Уникальный ID от банка
+        orderNumber: orderNumber,        // НАШ orderNumber
         amount: amount,
         currency: currency,
         formUrl: bankData.formUrl
