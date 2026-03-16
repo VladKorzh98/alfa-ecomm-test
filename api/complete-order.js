@@ -31,10 +31,11 @@ export default async function handler(req, res) {
   params.append('userName', process.env.ALFA_USERNAME || 'ABB_3-api');
   params.append('password', process.env.ALFA_PASSWORD || 'ABB_3*?1');
   params.append('orderId', orderId);
-  params.append('amount', toMinorUnits(amount));  // Конвертируем в минорные единицы
+  params.append('amount', toMinorUnits(amount));
 
   try {
-    const bankResponse = await fetch('https://abby.rbsuat.com/payment/rest/deposit.do', {
+    // 1. Отправляем запрос на завершение (deposit)
+    const depositResponse = await fetch('https://abby.rbsuat.com/payment/rest/deposit.do', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded'
@@ -42,20 +43,58 @@ export default async function handler(req, res) {
       body: params.toString()
     });
 
-    console.log('Bank HTTP status:', bankResponse.status);
+    console.log('Deposit HTTP status:', depositResponse.status);
     
-    const bankData = await bankResponse.json();
-    console.log('Deposit response:', bankData);
+    const depositData = await depositResponse.json();
+    console.log('Deposit response:', depositData);
 
-    if (!bankResponse.ok || bankData.errorCode) {
-      throw new Error(bankData.errorMessage || 'Ошибка от Альфа-Банка');
+    // ИСПРАВЛЕННАЯ ПРОВЕРКА: errorCode=0 означает успех
+    if (depositData.errorCode && depositData.errorCode !== '0' && depositData.errorCode !== 0) {
+      throw new Error(depositData.errorMessage || 'Ошибка от Альфа-Банка');
     }
 
+    console.log('Deposit successful!');
+
+    // 2. Запрашиваем статус заказа после завершения
+    const statusParams = new URLSearchParams();
+    statusParams.append('userName', process.env.ALFA_USERNAME || 'ABB_3-api');
+    statusParams.append('password', process.env.ALFA_PASSWORD || 'ABB_3*?1');
+    statusParams.append('orderId', orderId);
+
+    const statusResponse = await fetch('https://abby.rbsuat.com/payment/rest/getOrderStatusExtended.do', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: statusParams.toString()
+    });
+
+    console.log('Status HTTP status:', statusResponse.status);
+    
+    const statusData = await statusResponse.json();
+    console.log('Status after complete:', statusData);
+
+    if (statusData.errorCode && statusData.errorCode !== '0' && statusData.errorCode !== 0) {
+      console.warn('Warning: Could not get status after complete:', statusData.errorMessage);
+    }
+
+    // 3. Возвращаем данные
     return res.status(200).json({
       status: 'success',
       message: 'Заказ успешно завершён',
-      completedAmount: amount,  // Возвращаем сумму завершения для отображения
-      ...bankData
+      completedAmount: amount,
+      orderStatus: statusData.orderStatus,
+      orderId: statusData.orderId || orderId,
+      orderNumber: statusData.orderNumber,
+      amount: statusData.amount,
+      currency: statusData.currency,
+      authCode: statusData.authCode || null,
+      cardAuthInfo: {
+        maskedPan: statusData.cardAuthInfo?.maskedPan || null,
+        cardholderName: statusData.cardAuthInfo?.cardholderName || null,
+        panLast: statusData.cardAuthInfo?.panLast || null,
+        expiration: statusData.cardAuthInfo?.expiration || null
+      }
     });
 
   } catch (error) {
