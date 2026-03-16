@@ -5,14 +5,13 @@ const CURRENCY_CODES = {
   'RUB': '643'
 };
 
-// Генерация orderNumber (ровно 10 символов, буквы и цифры)
 function generateOrderNumber() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let result = '';
   for (let i = 0; i < 10; i++) {
     result += chars.charAt(Math.floor(Math.random() * chars.length));
   }
-  return result; // Пример: XF0ZGUMZKL
+  return result;
 }
 
 function toMinorUnits(amount) {
@@ -44,7 +43,6 @@ export default async function handler(req, res) {
       });
     }
 
-    // ГЕНЕРИРУЕМ наш orderNumber
     const orderNumber = generateOrderNumber();
     const amountMinor = toMinorUnits(amount);
     const currencyCode = CURRENCY_CODES[currency];
@@ -53,13 +51,12 @@ export default async function handler(req, res) {
     const protocol = process.env.VERCEL_ENV === 'production' ? 'https' : 'http';
     const returnUrl = `${protocol}://${host}/`;
 
-    // Формируем параметры запроса
     const params = new URLSearchParams();
     params.append('userName', process.env.ALFA_USERNAME || 'ABB_3-api');
     params.append('password', process.env.ALFA_PASSWORD || 'ABB_3*?1');
     params.append('amount', amountMinor);
     params.append('currency', currencyCode);
-    params.append('orderNumber', orderNumber);  // ОТПРАВЛЯЕМ наш orderNumber!
+    params.append('orderNumber', orderNumber);
     params.append('returnUrl', returnUrl);
     
     if (stageType === 'one-stage') {
@@ -73,11 +70,17 @@ export default async function handler(req, res) {
     console.log('Sending to Alfa Bank:', { 
       orderNumber: orderNumber,
       amountMinor: amountMinor, 
-      currencyCode: currencyCode 
+      currencyCode: currencyCode,
+      stageType: stageType
     });
 
     try {
-      const bankResponse = await fetch('https://abby.rbsuat.com/payment/rest/register.do', {
+      // ДЛЯ ДВУХСТАДИЙНЫХ: используем registerPreAuth.do
+      const endpoint = stageType === 'two-stage' 
+        ? 'https://abby.rbsuat.com/payment/rest/registerPreAuth.do'
+        : 'https://abby.rbsuat.com/payment/rest/register.do';
+
+      const bankResponse = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: params.toString()
@@ -90,14 +93,11 @@ export default async function handler(req, res) {
         throw new Error(bankData.errorMessage || 'Ошибка от Альфа-Банка');
       }
 
-      // Возвращаем:
-      // - orderId: уникальный ID от банка (из ответа)
-      // - orderNumber: НАШ сгенерированный (который отправили)
       return res.status(200).json({
         status: 'success',
         message: 'Заказ зарегистрирован',
-        orderId: bankData.orderId,      // Уникальный ID от банка
-        orderNumber: orderNumber,        // НАШ orderNumber
+        orderId: bankData.orderId,
+        orderNumber: orderNumber,
         amount: amount,
         currency: currency,
         formUrl: bankData.formUrl
