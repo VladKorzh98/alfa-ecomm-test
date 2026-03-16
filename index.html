@@ -128,6 +128,51 @@
             color: #ef3124;
             text-decoration: underline;
         }
+
+        .form-group {
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #ef3124;
+        }
+
+        .form-hint {
+            font-size: 12px;
+            color: #999;
+            margin-top: 5px;
+        }
+
+        .error-message {
+            color: #ef3124;
+            font-size: 14px;
+            margin-top: 5px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -168,11 +213,37 @@
             <div class="breadcrumb"><span onclick="showScreen('screen-ecom-type')">← Назад</span></div>
             <h1>Тип оплаты</h1>
             <p>Выберите стадийность платежа:</p>
-            <button class="btn" onclick="runEcomTest('one-stage')">Одностадийный</button>
-            <button class="btn btn-secondary" onclick="runEcomTest('two-stage')">Двухстадийный</button>
+            <button class="btn" onclick="checkAndProceed('one-stage')">Одностадийный</button>
+            <button class="btn btn-secondary" onclick="checkAndProceed('two-stage')">Двухстадийный</button>
         </div>
 
-        <!-- Экран 5: P2P (заглушка для будущего) -->
+        <!-- Экран 5: Ввод суммы и валюты (только для без привязки + одностадийный) -->
+        <div id="screen-ecom-input" class="screen">
+            <div class="breadcrumb"><span onclick="showScreen('screen-ecom-stage')">← Назад</span></div>
+            <h1>Параметры платежа</h1>
+            
+            <div class="form-group">
+                <label for="amount">Сумма платежа</label>
+                <input type="text" id="amount" placeholder="0.00" oninput="validateAmount(this)">
+                <div class="form-hint">Введите сумму с двумя знаками после запятой (например: 10.50)</div>
+                <div class="error-message" id="amount-error">Некорректная сумма. Используйте формат: 0.00</div>
+            </div>
+
+            <div class="form-group">
+                <label for="currency">Валюта</label>
+                <select id="currency">
+                    <option value="BYN">BYN - Белорусский рубль</option>
+                    <option value="USD">USD - Доллар США</option>
+                    <option value="EUR">EUR - Евро</option>
+                    <option value="RUB">RUB - Российский рубль</option>
+                </select>
+            </div>
+
+            <button class="btn" onclick="submitPaymentData()">Продолжить</button>
+            <button class="btn btn-secondary" onclick="showScreen('screen-ecom-stage')">Назад</button>
+        </div>
+
+        <!-- Экран 6: P2P (заглушка) -->
         <div id="screen-p2p" class="screen">
             <div class="breadcrumb"><span onclick="showScreen('screen-select')">← Назад</span></div>
             <h1>P2P-операции</h1>
@@ -180,12 +251,13 @@
             <button class="btn btn-secondary" onclick="showScreen('screen-select')">Назад</button>
         </div>
 
-        <!-- Экран 6: Процесс выполнения -->
+        <!-- Экран 7: Процесс выполнения -->
         <div id="screen-process" class="screen">
             <div class="breadcrumb"><span onclick="showScreen('screen-ecom-stage')">← Назад</span></div>
             <h1 id="process-title">Тестирование</h1>
             <div class="loader" id="loader"></div>
             <p id="status">Отправка запроса...</p>
+            <p id="payment-details" style="color:#666;font-size:14px;margin:10px 0"></p>
             <button class="btn btn-secondary" onclick="showScreen('screen-ecom-stage')" style="display:none" id="backBtn">Вернуться</button>
         </div>
 
@@ -205,7 +277,9 @@
         var testConfig = {
             operationType: '',
             registrationType: '',
-            stageType: ''
+            stageType: '',
+            amount: '',
+            currency: ''
         };
 
         // Переключение экранов
@@ -215,6 +289,41 @@
                 screens[i].classList.remove('active');
             }
             document.getElementById(screenId).classList.add('active');
+            
+            // Очищаем ошибки при переходе
+            clearErrors();
+        }
+
+        // Очистка ошибок
+        function clearErrors() {
+            var errorEl = document.getElementById('amount-error');
+            if (errorEl) {
+                errorEl.classList.remove('show');
+            }
+        }
+
+        // Валидация суммы
+        function validateAmount(input) {
+            // Разрешаем только цифры и точку
+            input.value = input.value.replace(/[^0-9.]/g, '');
+            
+            // Проверяем формат (максимум 2 знака после запятой)
+            var value = input.value;
+            var parts = value.split('.');
+            
+            if (parts.length > 2) {
+                input.value = parts[0] + '.' + parts[1];
+            }
+            
+            if (parts.length === 2 && parts[1].length > 2) {
+                input.value = parts[0] + '.' + parts[1].substring(0, 2);
+            }
+        }
+
+        // Проверка корректности суммы
+        function isValidAmount(amount) {
+            var regex = /^\d+(\.\d{1,2})?$/;
+            return regex.test(amount) && parseFloat(amount) > 0;
         }
 
         // Выбор типа операции (ECOM / P2P)
@@ -236,22 +345,69 @@
             showScreen('screen-ecom-stage');
         }
 
-        // Запуск ECOM теста
-        async function runEcomTest(stageType) {
+        // Проверка и переход (к форме ввода или сразу к тесту)
+        function checkAndProceed(stageType) {
             testConfig.stageType = stageType;
-            console.log('Full config:', testConfig);
             
+            // Если "без привязки" + "одностадийный" - показываем форму ввода
+            if (testConfig.registrationType === 'no-binding' && stageType === 'one-stage') {
+                // Очищаем поля
+                document.getElementById('amount').value = '';
+                document.getElementById('currency').value = 'BYN';
+                showScreen('screen-ecom-input');
+            } else {
+                // Для остальных случаев - сразу запускаем тест
+                runEcomTest();
+            }
+        }
+
+        // Отправка данных формы
+        function submitPaymentData() {
+            var amountInput = document.getElementById('amount');
+            var currencySelect = document.getElementById('currency');
+            var errorEl = document.getElementById('amount-error');
+            
+            var amount = amountInput.value.trim();
+            var currency = currencySelect.value;
+            
+            // Валидация
+            if (!amount || !isValidAmount(amount)) {
+                errorEl.classList.add('show');
+                amountInput.focus();
+                return;
+            }
+            
+            // Сохраняем данные
+            testConfig.amount = amount;
+            testConfig.currency = currency;
+            
+            console.log('Payment data:', testConfig);
+            
+            // Запускаем тест
+            runEcomTest();
+        }
+
+        // Запуск ECOM теста
+        async function runEcomTest() {
             showScreen('screen-process');
             
             var title = document.getElementById('process-title');
             var status = document.getElementById('status');
+            var details = document.getElementById('payment-details');
             var loader = document.getElementById('loader');
             var backBtn = document.getElementById('backBtn');
 
             // Формируем заголовок
             var regText = testConfig.registrationType === 'with-binding' ? 'С привязкой' : 'Без привязки';
-            var stageText = stageType === 'one-stage' ? 'Одностадийный' : 'Двухстадийный';
+            var stageText = testConfig.stageType === 'one-stage' ? 'Одностадийный' : 'Двухстадийный';
             title.innerText = regText + ' / ' + stageText;
+
+            // Показываем детали платежа если есть
+            if (testConfig.amount && testConfig.currency) {
+                details.innerText = testConfig.amount + ' ' + testConfig.currency;
+            } else {
+                details.innerText = '';
+            }
 
             status.innerText = 'Отправка запроса в Альфа-Банк...';
             status.style.color = '#666';
@@ -265,13 +421,15 @@
                     body: JSON.stringify({
                         operation: 'ecom',
                         registrationType: testConfig.registrationType,
-                        stageType: testConfig.stageType
+                        stageType: testConfig.stageType,
+                        amount: testConfig.amount || '1.00',
+                        currency: testConfig.currency || 'BYN'
                     })
                 });
 
                 console.log('Response status:', response.status);
                 var data = await response.json();
-                console.log('Response data:', data);
+                console.log('Response ', data);
 
                 if (!response.ok || data.error) {
                     throw new Error(data.message || 'Ошибка сервера: ' + response.status);
@@ -282,7 +440,7 @@
                 status.style.color = 'green';
                 backBtn.style.display = 'inline-block';
 
-                // Если есть ссылка на оплату - можно добавить переход
+                // Если есть ссылка на оплату
                 if (data.paymentUrl) {
                     status.innerHTML += '<br><br><a href="' + data.paymentUrl + '" target="_blank" style="color:#ef3124">Перейти к оплате →</a>';
                 }
