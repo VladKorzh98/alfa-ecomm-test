@@ -13,8 +13,8 @@ export default async function handler(req, res) {
   const { orderId, orderNumber } = req.body;
 
   console.log('=== CHECK STATUS API START ===');
-  console.log('orderId:', orderId);
-  console.log('orderNumber:', orderNumber);
+  console.log('orderId from request:', orderId);
+  console.log('orderNumber from request:', orderNumber);
 
   if (!orderId) {
     return res.status(400).json({
@@ -42,19 +42,25 @@ export default async function handler(req, res) {
     const bankData = await bankResponse.json();
     console.log('=== BANK RESPONSE ===');
     console.log(JSON.stringify(bankData, null, 2));
+    console.log('====================');
 
     if (bankData.errorCode && bankData.errorCode !== '0' && bankData.errorCode !== 0) {
       throw new Error(bankData.errorMessage || 'Ошибка от Альфа-Банка');
     }
 
+    console.log('Success!');
+    console.log('bankData.orderId:', bankData.orderId);
+    console.log('bankData.orderStatus:', bankData.orderStatus);
+
+    // ВОЗВРАЩАЕМ orderId из ответа банка!
     return res.status(200).json({
-      orderId: bankData.orderId,           // orderId от банка
-      orderNumber: orderNumber,            // НАШ orderNumber
+      orderId: bankData.orderId || orderId,  // Если банк не вернул, используем тот что отправили
+      orderNumber: orderNumber,
       orderStatus: bankData.orderStatus,
       amount: bankData.amount,
       currency: bankData.currency,
       authCode: bankData.authCode || null,
-      actionCodeDescription: bankData.actionCodeDescription || null,  // Описание ошибки
+      actionCodeDescription: bankData.actionCodeDescription || null,
       cardAuthInfo: {
         maskedPan: bankData.cardAuthInfo?.maskedPan || null,
         cardholderName: bankData.cardAuthInfo?.cardholderName || null,
