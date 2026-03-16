@@ -349,6 +349,7 @@
             animation: slideIn 0.3s ease;
             max-width: 350px;
             text-align: left;
+            z-index: 2000;
         }
 
         .result-toast.error {
@@ -821,10 +822,6 @@
                 if (rowPreAuth) rowPreAuth.style.display = 'none';
                 if (rowCompleted) rowCompleted.style.display = 'none';
                 if (rowRefunded) rowRefunded.style.display = 'none';
-                
-                var amount = data.amount ? (parseFloat(data.amount) / 100).toFixed(2) : '-';
-                var amountEl = document.getElementById('st-amount');
-                if (amountEl) amountEl.innerText = amount + ' ' + currencyName;
             }
             
             if (cardEl) {
@@ -853,9 +850,22 @@
                 if (errorDescBlock) errorDescBlock.style.display = 'none';
             }
             
+            // Показываем кнопки если:
+            // 1. Двухстадийный платеж
+            // 2. Статус 1 (Подтвержден) ИЛИ 8 (Частичное завершение)
+            // 3. Есть доступная сумма для операций
             var actionButtons = document.getElementById('action-buttons');
-            if (testConfig.stageType === 'two-stage' && status === '1') {
-                if (actionButtons) actionButtons.style.display = 'block';
+            if (testConfig.stageType === 'two-stage' && (status === '1' || status === '8')) {
+                var preAuth = parseFloat(testConfig.preAuthAmount) || 0;
+                var refunded = parseFloat(testConfig.refundedAmount) || 0;
+                var completed = parseFloat(testConfig.completedAmount) || 0;
+                var available = preAuth - refunded - completed;
+                
+                if (available > 0 && actionButtons) {
+                    actionButtons.style.display = 'block';
+                } else if (actionButtons) {
+                    actionButtons.style.display = 'none';
+                }
             } else {
                 if (actionButtons) actionButtons.style.display = 'none';
             }
@@ -985,6 +995,10 @@
                 var data = await response.json();
                 
                 if (!response.ok || data.error) {
+                    // Специфическая обработка errorCode 5
+                    if (data.errorCode === '5' || data.errorCode === 5) {
+                        throw new Error('Убедитесь, что используете тестовую карту процессинга. Повторите на новом заказе');
+                    }
                     throw new Error(data.message || 'Ошибка при отмене');
                 }
                 
