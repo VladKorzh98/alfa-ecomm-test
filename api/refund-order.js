@@ -50,12 +50,16 @@ export default async function handler(req, res) {
     console.log('Reverse response:', reverseData);
 
     if (reverseData.errorCode && reverseData.errorCode !== '0' && reverseData.errorCode !== 0) {
-      throw new Error(reverseData.errorMessage || 'Ошибка от Альфа-Банка');
+      // Возвращаем errorCode и errorMessage клиенту
+      return res.status(reverseResponse.ok ? 400 : reverseResponse.status).json({
+        error: 'refund_failed',
+        errorCode: reverseData.errorCode,
+        message: reverseData.errorMessage || 'Ошибка от Альфа-Банка'
+      });
     }
 
     console.log('Reverse successful!');
 
-    // Запрашиваем статус после отмены
     const statusParams = new URLSearchParams();
     statusParams.append('userName', process.env.ALFA_USERNAME || 'ABB_3-api');
     statusParams.append('password', process.env.ALFA_PASSWORD || 'ABB_3*?1');
