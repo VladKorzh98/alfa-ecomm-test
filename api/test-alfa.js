@@ -6,23 +6,22 @@ const CURRENCY_CODES = {
   'RUB': '643'
 };
 
-// Генерация уникального orderNumber (макс 12 символов, буквы+цифры)
+// Генерация уникального orderNumber (макс 12 символов)
 function generateOrderNumber() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let result = 'ORD';
   for (let i = 0; i < 9; i++) {
     result += chars.charAt(Math.floor(Math.random() * chars.length));
   }
-  return result; // Пример: ORDA7K9M2X1
+  return result;
 }
 
-// Конвертация суммы в минорные единицы (10.21 -> 1021)
+// Конвертация суммы в минорные единицы
 function toMinorUnits(amount) {
   return Math.round(parseFloat(amount) * 100).toString();
 }
 
 export default async function handler(req, res) {
-  // Разрешаем только POST
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -33,7 +32,7 @@ export default async function handler(req, res) {
 
   if (operation === 'ecom') {
     
-    // === Валидация входных данных ===
+    // Валидация
     if (!amount || !/^\d+(\.\d{1,2})?$/.test(amount)) {
       return res.status(400).json({
         error: 'invalid_amount',
@@ -48,17 +47,15 @@ export default async function handler(req, res) {
       });
     }
 
-    // === Подготовка параметров для Альфа-Банка ===
+    // Подготовка параметров
     const orderNumber = generateOrderNumber();
     const amountMinor = toMinorUnits(amount);
     const currencyCode = CURRENCY_CODES[currency];
     
-    // Получаем домен сайта для returnUrl (из заголовка или env)
     const host = req.headers.host || process.env.VERCEL_URL || 'localhost';
     const protocol = process.env.VERCEL_ENV === 'production' ? 'https' : 'http';
     const returnUrl = `${protocol}://${host}/`;
 
-    // Формируем тело запроса (x-www-form-urlencoded)
     const params = new URLSearchParams();
     params.append('userName', process.env.ALFA_USERNAME || 'ABB_3-api');
     params.append('password', process.env.ALFA_PASSWORD || 'ABB_3*?1');
@@ -67,45 +64,37 @@ export default async function handler(req, res) {
     params.append('orderNumber', orderNumber);
     params.append('returnUrl', returnUrl);
     
-    // Дополнительные параметры для одностадийного платежа
     if (stageType === 'one-stage') {
-      params.append('orderBinding', 'false'); // Без привязки
+      params.append('orderBinding', 'false');
     }
     if (registrationType === 'with-binding') {
       params.append('orderBinding', 'true');
-      params.append('clientId', 'client_' + Date.now()); // ID клиента для привязки
+      params.append('clientId', 'client_' + Date.now());
     }
 
-    console.log('Sending to Alfa Bank:', { orderNumber, amountMinor, currencyCode, returnUrl });
+    console.log('Sending to Alfa Bank:', { orderNumber, amountMinor, currencyCode });
 
     try {
-      // === Отправка запроса в Альфа-Банк ===
       const bankResponse = await fetch('https://abby.rbsuat.com/payment/rest/register.do', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: params.toString()
       });
 
       const bankData = await bankResponse.json();
       console.log('Alfa Bank response:', bankData);
 
-      // Обработка ошибок от банка
       if (!bankResponse.ok || bankData.errorCode) {
         throw new Error(bankData.errorMessage || 'Ошибка от Альфа-Банка');
       }
 
-      // === Успешный ответ ===
       return res.status(200).json({
         status: 'success',
         message: 'Заказ зарегистрирован',
         orderId: orderNumber,
         amount: amount,
         currency: currency,
-        formUrl: bankData.formUrl, // Ссылка на платежную страницу
-        // Для отладки (в продакшене можно убрать):
-        _debug: { amountMinor, currencyCode, returnUrl }
+        formUrl: bankData.formUrl
       });
 
     } catch (error) {
