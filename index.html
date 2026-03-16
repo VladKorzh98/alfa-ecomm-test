@@ -710,7 +710,6 @@
             var preAuthAmount = testConfig.preAuthAmount || (data.amount ? (parseFloat(data.amount) / 100).toFixed(2) : '-');
             document.getElementById('st-preauth-amount').innerText = preAuthAmount + ' ' + (currencyMap[data.currency] || data.currency || '');
             
-            // Показываем сумму завершения если она есть
             if (data.completedAmount) {
                 document.getElementById('row-completed-amount').style.display = 'flex';
                 document.getElementById('st-completed-amount').innerText = data.completedAmount + ' ' + (currencyMap[data.currency] || data.currency || '');
@@ -764,6 +763,10 @@
             var submitBtn = document.getElementById('complete-submit-btn');
             var amount = amountInput.value.trim();
             
+            console.log('=== SUBMIT COMPLETE ===');
+            console.log('Amount:', amount);
+            console.log('OrderId:', testConfig.orderId);
+            
             if (!amount || !isValidAmount(amount)) {
                 errorEl.classList.add('show');
                 amountInput.focus();
@@ -776,10 +779,13 @@
             }
             
             // Блокируем кнопку во время запроса
+            var originalBtnText = submitBtn.innerText;
             submitBtn.disabled = true;
             submitBtn.innerText = 'Обработка...';
             
             try {
+                console.log('Sending complete request...');
+                
                 var response = await fetch('/api/complete-order', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
@@ -789,29 +795,39 @@
                     })
                 });
                 
-                var data = await response.json();
+                console.log('Response status:', response.status);
                 
-                if (!response.ok || data.error) {
+                if (!response.ok) {
+                    throw new Error('HTTP error: ' + response.status);
+                }
+                
+                var data = await response.json();
+                console.log('Response data:', data);
+                
+                if (data.error) {
                     throw new Error(data.message || 'Ошибка при завершении заказа');
                 }
                 
                 // Успешное завершение - показываем страницу статуса
                 testConfig.completedAmount = amount;
                 
+                console.log('Success! Reloading status...');
+                
                 // Перезапрашиваем статус и показываем страницу
+                showScreen('screen-status');
                 await checkOrderStatus(testConfig.orderId);
                 
             } catch (error) {
-                console.error('Complete error:', error);
+                console.error('=== COMPLETE ERROR ===');
+                console.error(error);
+                console.error('=====================');
                 
                 // Показываем ошибку и оставляем форму активной
-                showErrorModal(error.message);
+                showErrorModal(error.message || 'Не удалось завершить заказ. Попробуйте снова.');
                 
-                // Разблокируем кнопку через 7 секунд
-                setTimeout(function() {
-                    submitBtn.disabled = false;
-                    submitBtn.innerText = 'Завершить заказ';
-                }, 7000);
+                // Разблокируем кнопку
+                submitBtn.disabled = false;
+                submitBtn.innerText = originalBtnText;
             }
         }
 
