@@ -201,17 +201,7 @@
             border-radius: 8px;
             margin: 20px 0;
             text-align: left;
-            border-left: 4px solid #ef3124;
-        }
-
-        .result-box.success {
-            border-left-color: #28a745;
-            background: #d4edda;
-        }
-
-        .result-box.error {
-            border-left-color: #ef3124;
-            background: #f8d7da;
+            border-left: 4px solid #ddd;
         }
 
         .result-row {
@@ -478,9 +468,13 @@
                         <span class="result-label">Номер заказа:</span>
                         <span class="result-value" id="st-order-number"></span>
                     </div>
-                    <div class="result-row">
+                    <div class="result-row" id="row-preauth-amount">
                         <span class="result-label">Сумма преавторизации:</span>
                         <span class="result-value" id="st-preauth-amount"></span>
+                    </div>
+                    <div class="result-row" id="row-amount" style="display:none">
+                        <span class="result-label">Сумма:</span>
+                        <span class="result-value" id="st-amount"></span>
                     </div>
                     <div class="result-row" id="row-completed-amount" style="display:none">
                         <span class="result-label">Сумма завершения:</span>
@@ -549,7 +543,7 @@
             '3': { text: 'Авторизация отменена', class: 'status-3' },
             '4': { text: 'Возврат совершен', class: 'status-4' },
             '5': { text: 'Инициирована 3D-Secure', class: 'status-5' },
-            '6': { text: 'Оплата отклонена', class: 'status-6' },
+            '6': { text: 'Отклонен', class: 'status-6' },
             '7': { text: 'Ожидание оплаты', class: 'status-7' },
             '8': { text: 'Частичное завершение', class: 'status-8' }
         };
@@ -698,28 +692,42 @@
             statusBadge.classList.add(statusInfo.class);
             statusBadge.innerText = statusInfo.text;
             
-            if (status === '2') {
-                statusBox.classList.add('success');
-            } else if (status === '3' || status === '4' || status === '6') {
-                statusBox.classList.add('error');
-            }
-            
             document.getElementById('st-order-id').innerText = data.orderId || testConfig.orderId || '-';
             document.getElementById('st-order-number').innerText = data.orderNumber || '-';
-            
-            var preAuthAmount = testConfig.preAuthAmount || (data.amount ? (parseFloat(data.amount) / 100).toFixed(2) : '-');
-            document.getElementById('st-preauth-amount').innerText = preAuthAmount + ' ' + (currencyMap[data.currency] || data.currency || '');
-            
-            if (data.completedAmount) {
-                document.getElementById('row-completed-amount').style.display = 'flex';
-                document.getElementById('st-completed-amount').innerText = data.completedAmount + ' ' + (currencyMap[data.currency] || data.currency || '');
-            } else {
-                document.getElementById('row-completed-amount').style.display = 'none';
-            }
             
             var currencyCode = data.currency || '933';
             var currencyName = currencyMap[currencyCode] || currencyCode;
             document.getElementById('st-currency').innerText = currencyName;
+            
+            // Определяем, какое поле суммы показывать
+            var rowPreAuth = document.getElementById('row-preauth-amount');
+            var rowAmount = document.getElementById('row-amount');
+            var rowCompleted = document.getElementById('row-completed-amount');
+            
+            if (testConfig.stageType === 'two-stage') {
+                // Для двухстадийных: показываем "Сумма преавторизации"
+                rowPreAuth.style.display = 'flex';
+                rowAmount.style.display = 'none';
+                
+                var preAuthAmount = testConfig.preAuthAmount || (data.amount ? (parseFloat(data.amount) / 100).toFixed(2) : '-');
+                document.getElementById('st-preauth-amount').innerText = preAuthAmount + ' ' + currencyName;
+                
+                // Если есть сумма завершения
+                if (data.completedAmount) {
+                    rowCompleted.style.display = 'flex';
+                    document.getElementById('st-completed-amount').innerText = data.completedAmount + ' ' + currencyName;
+                } else {
+                    rowCompleted.style.display = 'none';
+                }
+            } else {
+                // Для одностадийных: показываем просто "Сумма"
+                rowPreAuth.style.display = 'none';
+                rowAmount.style.display = 'flex';
+                rowCompleted.style.display = 'none';
+                
+                var amount = data.amount ? (parseFloat(data.amount) / 100).toFixed(2) : '-';
+                document.getElementById('st-amount').innerText = amount + ' ' + currencyName;
+            }
             
             if (data.cardAuthInfo && data.cardAuthInfo.maskedPan) {
                 document.getElementById('st-card').innerText = data.cardAuthInfo.maskedPan;
