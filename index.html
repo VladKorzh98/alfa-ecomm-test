@@ -298,25 +298,6 @@
                 opacity: 1;
             }
         }
-
-        .order-info {
-            background: #fff3cd;
-            padding: 15px;
-            border-radius: 5px;
-            margin: 15px 0;
-            text-align: left;
-        }
-
-        .order-info-label {
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-
-        .order-info-value {
-            font-family: 'Courier New', monospace;
-            font-size: 18px;
-            letter-spacing: 1px;
-        }
     </style>
 </head>
 <body>
@@ -328,14 +309,12 @@
 
     <div class="container">
         
-        <!-- Экран 1: Приветствие -->
         <div id="screen-welcome" class="screen active">
             <h1>Добро пожаловать</h1>
             <p>Тестирование API Альфа-Банка РБ</p>
             <button class="btn" onclick="showScreen('screen-select')">Начать тестирование</button>
         </div>
 
-        <!-- Экран 2: Выбор типа операций -->
         <div id="screen-select" class="screen">
             <div class="breadcrumb"><span onclick="showScreen('screen-welcome')">← На главную</span></div>
             <h1>Выберите тип операций</h1>
@@ -343,7 +322,6 @@
             <button class="btn btn-secondary" onclick="selectOperationType('p2p')">P2P-операции</button>
         </div>
 
-        <!-- Экран 3: ECOM - Тип регистрации -->
         <div id="screen-ecom-type" class="screen">
             <div class="breadcrumb"><span onclick="showScreen('screen-select')">← Назад</span></div>
             <h1>Регистрация заказа</h1>
@@ -352,7 +330,6 @@
             <button class="btn btn-secondary" onclick="selectEcomType('with-binding')">С привязкой</button>
         </div>
 
-        <!-- Экран 4: ECOM - Стадийность -->
         <div id="screen-ecom-stage" class="screen">
             <div class="breadcrumb"><span onclick="showScreen('screen-ecom-type')">← Назад</span></div>
             <h1>Тип оплаты</h1>
@@ -361,7 +338,6 @@
             <button class="btn btn-secondary" onclick="checkAndProceed('two-stage')">Двухстадийный</button>
         </div>
 
-        <!-- Экран 5: Ввод суммы и валюты -->
         <div id="screen-ecom-input" class="screen">
             <div class="breadcrumb"><span onclick="showScreen('screen-ecom-stage')">← Назад</span></div>
             <h1>Параметры платежа</h1>
@@ -387,7 +363,6 @@
             <button class="btn btn-secondary" onclick="showScreen('screen-ecom-stage')">Назад</button>
         </div>
 
-        <!-- Экран 6: P2P (заглушка) -->
         <div id="screen-p2p" class="screen">
             <div class="breadcrumb"><span onclick="showScreen('screen-select')">← Назад</span></div>
             <h1>P2P-операции</h1>
@@ -395,7 +370,6 @@
             <button class="btn btn-secondary" onclick="showScreen('screen-select')">Назад</button>
         </div>
 
-        <!-- Экран 7: Процесс выполнения -->
         <div id="screen-process" class="screen">
             <div class="breadcrumb"><span onclick="showScreen('screen-ecom-stage')">← Назад</span></div>
             <h1 id="process-title">Тестирование</h1>
@@ -412,7 +386,6 @@
             <button class="btn btn-pay" id="payBtn" style="display:none">Перейти к оплате →</button>
         </div>
 
-        <!-- Экран 8: Результат статуса заказа -->
         <div id="screen-status" class="screen">
             <div class="breadcrumb"><span onclick="showScreen('screen-welcome')">← На главную</span></div>
             <h1>Статус платежа</h1>
@@ -461,10 +434,8 @@
 
     </div>
 
-    <!-- Toast уведомление -->
     <div id="toast" class="toast">Скопировано!</div>
 
-    <!-- Модальное окно ошибки -->
     <div id="errorModal" class="modal" onclick="this.style.display='none'">
         <div class="modal-content" onclick="event.stopPropagation()">
             <h3 style="color:#ef3124;margin-top:0">Ошибка API</h3>
@@ -474,7 +445,6 @@
     </div>
 
     <script>
-        // Глобальные переменные
         var testConfig = {
             operationType: '',
             registrationType: '',
@@ -485,7 +455,6 @@
             orderNumber: ''
         };
 
-        // Карта статусов
         var statusMap = {
             '0': { text: 'Заказ зарегистрирован, не оплачен', class: 'status-0' },
             '1': { text: 'Заказ авторизован, не завершен', class: 'status-1' },
@@ -498,7 +467,6 @@
             '8': { text: 'Частичное завершение', class: 'status-8' }
         };
 
-        // Карта валют
         var currencyMap = {
             '933': 'BYN',
             '840': 'USD',
@@ -506,12 +474,10 @@
             '643': 'RUB'
         };
 
-        // Инициализация при загрузке
         window.addEventListener('DOMContentLoaded', function() {
             checkReturnUrl();
         });
 
-        // Копирование в буфер обмена
         function copyToClipboard(elementId, btn) {
             var element = document.getElementById(elementId);
             var text = element.innerText;
@@ -545,7 +511,6 @@
             });
         }
 
-        // Показ toast уведомления
         function showToast() {
             var toast = document.getElementById('toast');
             toast.style.display = 'block';
@@ -555,7 +520,6 @@
             }, 2000);
         }
 
-        // Проверка returnUrl параметров
         function checkReturnUrl() {
             var urlParams = new URLSearchParams(window.location.search);
             var orderId = urlParams.get('orderId');
@@ -570,7 +534,6 @@
             }
         }
 
-        // Проверка статуса заказа
         async function checkOrderStatus(orderId) {
             var loader = document.getElementById('status-loader');
             var text = document.getElementById('status-text');
@@ -587,27 +550,22 @@
             result.style.display = 'none';
 
             try {
-                console.log('Отправка запроса на /api/check-status...');
-                
                 var response = await fetch('/api/check-status', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ orderId: orderId })
+                    body: JSON.stringify({ 
+                        orderId: orderId,
+                        orderNumber: testConfig.orderNumber
+                    })
                 });
 
                 console.log('Status code:', response.status);
-                console.log('Response OK:', response.ok);
                 
                 var data = await response.json();
                 console.log('=== ОТВЕТ API ===');
                 console.log(data);
-                console.log('==================');
 
-                if (!response.ok) {
-                    throw new Error('HTTP error: ' + response.status + ' - ' + (data.message || data.error));
-                }
-                
-                if (data.error) {
+                if (!response.ok || data.error) {
                     throw new Error(data.message || 'Ошибка в ответе API');
                 }
 
@@ -619,7 +577,6 @@
             } catch (error) {
                 console.error('=== ОШИБКА ===');
                 console.error(error);
-                console.error('============');
                 
                 loader.style.display = 'none';
                 text.innerText = 'Ошибка: ' + error.message;
@@ -627,7 +584,6 @@
             }
         }
 
-        // Отображение статуса
         function displayOrderStatus(data) {
             var status = data.orderStatus;
             var statusInfo = statusMap[status] || { text: 'Неизвестный статус', class: 'status-0' };
@@ -647,17 +603,9 @@
                 statusBox.classList.add('error');
             }
             
-            // Уникальный номер заказа (orderId) - из ответа API
-            var uniqueOrderId = data.orderId || testConfig.orderId || '-';
-            console.log('Displaying orderId:', uniqueOrderId);
-            document.getElementById('st-order-id').innerText = uniqueOrderId;
+            document.getElementById('st-order-id').innerText = data.orderId || '-';
+            document.getElementById('st-order-number').innerText = data.orderNumber || '-';
             
-            // Номер заказа (orderNumber) - из ответа API
-            var orderNum = data.orderNumber || testConfig.orderNumber || '-';
-            console.log('Displaying orderNumber:', orderNum);
-            document.getElementById('st-order-number').innerText = orderNum;
-            
-            // Сумма и валюта
             var amount = data.amount ? (parseFloat(data.amount) / 100).toFixed(2) : '-';
             var currencyCode = data.currency || '933';
             var currencyName = currencyMap[currencyCode] || currencyCode;
@@ -665,17 +613,12 @@
             document.getElementById('st-amount').innerText = amount;
             document.getElementById('st-currency').innerText = currencyName;
             
-            // Маска карты из cardAuthInfo.maskedPan
             if (data.cardAuthInfo && data.cardAuthInfo.maskedPan) {
                 document.getElementById('st-card').innerText = data.cardAuthInfo.maskedPan;
-            } else if (data.cardAuthInfo && data.cardAuthInfo.panLast) {
-                var cardNum = data.cardAuthInfo.panLast;
-                document.getElementById('st-card').innerText = '**** **** **** ' + cardNum;
             } else {
                 document.getElementById('st-card').innerText = 'Не указана';
             }
             
-            // Код авторизации (если есть)
             if (data.authCode) {
                 document.getElementById('row-auth').style.display = 'flex';
                 document.getElementById('st-auth').innerText = data.authCode;
@@ -684,7 +627,6 @@
             }
         }
 
-        // Переключение экранов
         function showScreen(screenId) {
             var screens = document.getElementsByClassName('screen');
             for (var i = 0; i < screens.length; i++) {
@@ -695,7 +637,6 @@
             resetProcessScreen();
         }
 
-        // Сброс экрана процесса
         function resetProcessScreen() {
             document.getElementById('loader').style.display = 'none';
             document.getElementById('status').innerText = 'Отправка запроса...';
@@ -705,13 +646,11 @@
             document.getElementById('resultDetails').style.display = 'none';
         }
 
-        // Очистка ошибок
         function clearErrors() {
             var errorEl = document.getElementById('amount-error');
             if (errorEl) errorEl.classList.remove('show');
         }
 
-        // Валидация суммы
         function validateAmount(input) {
             input.value = input.value.replace(/[^0-9.]/g, '');
             var parts = input.value.split('.');
@@ -723,7 +662,6 @@
             }
         }
 
-        // Форматирование суммы
         function formatAmount(input) {
             var value = input.value.trim();
             if (value && !value.includes('.')) {
@@ -736,13 +674,11 @@
             }
         }
 
-        // Проверка суммы
         function isValidAmount(amount) {
             var regex = /^\d+(\.\d{2})?$/;
             return regex.test(amount) && parseFloat(amount) > 0;
         }
 
-        // Выбор типа операции
         function selectOperationType(type) {
             testConfig.operationType = type;
             if (type === 'ecom') {
@@ -752,13 +688,11 @@
             }
         }
 
-        // Выбор типа регистрации
         function selectEcomType(regType) {
             testConfig.registrationType = regType;
             showScreen('screen-ecom-stage');
         }
 
-        // Проверка и переход
         function checkAndProceed(stageType) {
             testConfig.stageType = stageType;
             if (testConfig.registrationType === 'no-binding' && stageType === 'one-stage') {
@@ -772,7 +706,6 @@
             }
         }
 
-        // Отправка данных формы
         function submitPaymentData() {
             var amountInput = document.getElementById('amount');
             var currencySelect = document.getElementById('currency');
@@ -792,7 +725,6 @@
             runEcomTest();
         }
 
-        // Запуск ECOM теста
         async function runEcomTest() {
             showScreen('screen-process');
             
@@ -830,18 +762,16 @@
                 var data = await response.json();
                 console.log('=== REGISTER RESPONSE ===');
                 console.log(data);
-                console.log('========================');
 
                 if (!response.ok || data.error) {
-                    throw new Error(data.message || 'Ошибка сервера: ' + response.status);
+                    throw new Error(data.message || 'Ошибка сервера');
                 }
 
-                // Сохраняем orderId (от банка) и orderNumber (наш сгенерированный)
                 testConfig.orderId = data.orderId;
                 testConfig.orderNumber = data.orderNumber;
                 
-                console.log('Saved testConfig.orderId:', testConfig.orderId);
-                console.log('Saved testConfig.orderNumber:', testConfig.orderNumber);
+                console.log('Saved orderId:', testConfig.orderId);
+                console.log('Saved orderNumber:', testConfig.orderNumber);
 
                 document.getElementById('res-order').innerText = data.orderNumber;
                 document.getElementById('res-amount').innerText = data.amount + ' ' + data.currency;
@@ -849,7 +779,7 @@
                 resultDetails.style.display = 'block';
 
                 loader.style.display = 'none';
-                status.innerText = '✓ ' + (data.message || 'Заказ зарегистрирован');
+                status.innerText = '✓ Заказ зарегистрирован';
                 status.style.color = 'green';
                 backBtn.style.display = 'inline-block';
 
