@@ -498,10 +498,7 @@
             var text = element.innerText;
             
             navigator.clipboard.writeText(text).then(function() {
-                // Показываем toast
                 showToast();
-                
-                // Меняем текст кнопки
                 var originalText = btn.innerText;
                 btn.innerText = 'Скопировано!';
                 btn.classList.add('copied');
@@ -511,7 +508,6 @@
                     btn.classList.remove('copied');
                 }, 2000);
             }).catch(function(err) {
-                // Фолбэк для старых браузеров
                 var textArea = document.createElement('textarea');
                 textArea.value = text;
                 document.body.appendChild(textArea);
@@ -631,10 +627,12 @@
             }
             
             // Уникальный номер заказа (orderId)
-            document.getElementById('st-order-id').innerText = data.orderId || '-';
+            var uniqueOrderId = data.orderId || testConfig.orderId || '-';
+            document.getElementById('st-order-id').innerText = uniqueOrderId;
             
             // Номер заказа (orderNumber)
-            document.getElementById('st-order-number').innerText = data.orderNumber || '-';
+            var orderNum = data.orderNumber || testConfig.orderNumber || '-';
+            document.getElementById('st-order-number').innerText = orderNum;
             
             // Сумма и валюта
             var amount = data.amount ? (parseFloat(data.amount) / 100).toFixed(2) : '-';
@@ -644,9 +642,9 @@
             document.getElementById('st-amount').innerText = amount;
             document.getElementById('st-currency').innerText = currencyName;
             
-            // Маска карты из maskedPan
-            if (data.maskedPan) {
-                document.getElementById('st-card').innerText = data.maskedPan;
+            // Маска карты из cardAuthInfo.maskedPan
+            if (data.cardAuthInfo && data.cardAuthInfo.maskedPan) {
+                document.getElementById('st-card').innerText = data.cardAuthInfo.maskedPan;
             } else if (data.cardAuthInfo && data.cardAuthInfo.panLast) {
                 var cardNum = data.cardAuthInfo.panLast;
                 document.getElementById('st-card').innerText = '**** **** **** ' + cardNum;
