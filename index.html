@@ -298,6 +298,21 @@
                 opacity: 1;
             }
         }
+
+        .error-description {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 12px;
+            border-radius: 5px;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+
+        .error-description-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #856404;
+        }
     </style>
 </head>
 <body>
@@ -426,6 +441,12 @@
                         <span class="result-label">Код авторизации:</span>
                         <span class="result-value" id="st-auth"></span>
                     </div>
+                    <div id="error-description-block" style="display:none">
+                        <div class="error-description">
+                            <div class="error-description-title">Описание ошибки:</div>
+                            <div id="st-error-description"></div>
+                        </div>
+                    </div>
                 </div>
 
                 <button class="btn" onclick="clearSessionAndGoHome()">Новый платеж</button>
@@ -474,13 +495,11 @@
             '643': 'RUB'
         };
 
-        // ВОССТАНАВЛИВАЕМ данные из sessionStorage при загрузке
         window.addEventListener('DOMContentLoaded', function() {
             restoreFromSession();
             checkReturnUrl();
         });
 
-        // Восстановление из sessionStorage
         function restoreFromSession() {
             var savedOrderId = sessionStorage.getItem('orderId');
             var savedOrderNumber = sessionStorage.getItem('orderNumber');
@@ -495,7 +514,6 @@
             }
         }
 
-        // Сохранение в sessionStorage
         function saveToSession() {
             if (testConfig.orderId) {
                 sessionStorage.setItem('orderId', testConfig.orderId);
@@ -506,7 +524,6 @@
             console.log('Saved to session:', { orderId: testConfig.orderId, orderNumber: testConfig.orderNumber });
         }
 
-        // Очистка sessionStorage
         function clearSession() {
             sessionStorage.removeItem('orderId');
             sessionStorage.removeItem('orderNumber');
@@ -644,10 +661,12 @@
                 statusBox.classList.add('error');
             }
             
-            console.log('Displaying orderId:', data.orderId);
-            console.log('Displaying orderNumber:', data.orderNumber);
+            // Показываем orderId из ответа API (от банка)
+            console.log('Displaying orderId from API:', data.orderId);
+            document.getElementById('st-order-id').innerText = data.orderId || testConfig.orderId || '-';
             
-            document.getElementById('st-order-id').innerText = data.orderId || '-';
+            // Показываем orderNumber (наш)
+            console.log('Displaying orderNumber:', data.orderNumber);
             document.getElementById('st-order-number').innerText = data.orderNumber || '-';
             
             var amount = data.amount ? (parseFloat(data.amount) / 100).toFixed(2) : '-';
@@ -668,6 +687,14 @@
                 document.getElementById('st-auth').innerText = data.authCode;
             } else {
                 document.getElementById('row-auth').style.display = 'none';
+            }
+            
+            // Если статус 6 (отклонена), показываем описание ошибки
+            if (status === '6' && data.actionCodeDescription) {
+                document.getElementById('error-description-block').style.display = 'block';
+                document.getElementById('st-error-description').innerText = data.actionCodeDescription;
+            } else {
+                document.getElementById('error-description-block').style.display = 'none';
             }
         }
 
@@ -814,7 +841,6 @@
                 testConfig.orderId = data.orderId;
                 testConfig.orderNumber = data.orderNumber;
                 
-                // СОХРАНЯЕМ в sessionStorage
                 saveToSession();
                 
                 console.log('Saved orderId:', testConfig.orderId);
