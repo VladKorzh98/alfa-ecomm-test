@@ -426,6 +426,23 @@
             <button class="btn btn-pay" id="payBtn" style="display:none">Перейти к оплате →</button>
         </div>
 
+        <!-- Экран ввода суммы завершения -->
+        <div id="screen-complete-amount" class="screen">
+            <div class="breadcrumb"><span onclick="showScreen('screen-status')">← Назад</span></div>
+            <h1>Завершение заказа</h1>
+            <p>Введите сумму для завершения двухстадийного платежа:</p>
+            
+            <div class="form-group">
+                <label for="complete-amount">Сумма завершения</label>
+                <input type="text" id="complete-amount" placeholder="0.00" oninput="validateAmount(this)" onblur="formatAmount(this)">
+                <div class="form-hint">Максимум: <span id="max-amount"></span></div>
+                <div class="error-message" id="complete-amount-error">Некорректная сумма</div>
+            </div>
+
+            <button class="btn" onclick="submitCompleteAmount()">Завершить заказ</button>
+            <button class="btn btn-secondary" onclick="showScreen('screen-status')">Отмена</button>
+        </div>
+
         <div id="screen-status" class="screen">
             <div class="breadcrumb"><span onclick="showScreen('screen-welcome')">← На главную</span></div>
             <h1>Статус платежа</h1>
@@ -451,8 +468,12 @@
                         <span class="result-value" id="st-order-number"></span>
                     </div>
                     <div class="result-row">
-                        <span class="result-label">Сумма:</span>
-                        <span class="result-value" id="st-amount"></span>
+                        <span class="result-label">Сумма преавторизации:</span>
+                        <span class="result-value" id="st-preauth-amount"></span>
+                    </div>
+                    <div class="result-row" id="row-completed-amount" style="display:none">
+                        <span class="result-label">Сумма завершения:</span>
+                        <span class="result-value" id="st-completed-amount"></span>
                     </div>
                     <div class="result-row">
                         <span class="result-label">Валюта:</span>
@@ -476,7 +497,7 @@
                     <div class="action-buttons" id="action-buttons" style="display:none">
                         <div class="action-buttons-title">Действия с заказом:</div>
                         <div class="button-group">
-                            <button class="btn btn-small btn-pay" onclick="completeTwoStageOrder()">✓ Завершить</button>
+                            <button class="btn btn-small btn-pay" onclick="showCompleteAmountScreen()">✓ Завершить</button>
                             <button class="btn btn-small btn-secondary" onclick="cancelTwoStageOrder()">✗ Отменить</button>
                         </div>
                     </div>
@@ -506,7 +527,8 @@
             amount: '',
             currency: '',
             orderId: '',
-            orderNumber: ''
+            orderNumber: '',
+            preAuthAmount: ''
         };
 
         var statusMap = {
@@ -537,36 +559,27 @@
             var savedOrderId = sessionStorage.getItem('orderId');
             var savedOrderNumber = sessionStorage.getItem('orderNumber');
             var savedStageType = sessionStorage.getItem('stageType');
+            var savedPreAuthAmount = sessionStorage.getItem('preAuthAmount');
             
             if (savedOrderId) testConfig.orderId = savedOrderId;
             if (savedOrderNumber) testConfig.orderNumber = savedOrderNumber;
             if (savedStageType) testConfig.stageType = savedStageType;
-            
-            console.log('=== RESTORED FROM SESSION ===');
-            console.log('orderId:', testConfig.orderId);
-            console.log('orderNumber:', testConfig.orderNumber);
-            console.log('stageType:', testConfig.stageType);
-            console.log('============================');
+            if (savedPreAuthAmount) testConfig.preAuthAmount = savedPreAuthAmount;
         }
 
         function saveToSession() {
             if (testConfig.orderId) sessionStorage.setItem('orderId', testConfig.orderId);
             if (testConfig.orderNumber) sessionStorage.setItem('orderNumber', testConfig.orderNumber);
             if (testConfig.stageType) sessionStorage.setItem('stageType', testConfig.stageType);
-            console.log('=== SAVED TO SESSION ===');
-            console.log('orderId:', testConfig.orderId);
-            console.log('orderNumber:', testConfig.orderNumber);
-            console.log('stageType:', testConfig.stageType);
-            console.log('========================');
+            if (testConfig.preAuthAmount) sessionStorage.setItem('preAuthAmount', testConfig.preAuthAmount);
         }
 
         function clearSession() {
-            sessionStorage.removeItem('orderId');
-            sessionStorage.removeItem('orderNumber');
-            sessionStorage.removeItem('stageType');
-            testConfig.orderId = '';
-            testConfig.orderNumber = '';
-            testConfig.stageType = '';
+            sessionStorage.clear();
+            testConfig = {
+                operationType: '', registrationType: '', stageType: '',
+                amount: '', currency: '', orderId: '', orderNumber: '', preAuthAmount: ''
+            };
         }
 
         function clearSessionAndGoHome() {
@@ -617,12 +630,6 @@
             
             if (orderId || mdOrder) {
                 var actualOrderId = orderId || mdOrder;
-                console.log('=== RETURN URL DETECTED ===');
-                console.log('orderId from URL:', actualOrderId);
-                console.log('testConfig.orderId:', testConfig.orderId);
-                console.log('testConfig.stageType:', testConfig.stageType);
-                console.log('=========================');
-                
                 showScreen('screen-status');
                 checkOrderStatus(actualOrderId);
             }
@@ -649,12 +656,6 @@
                 });
 
                 var data = await response.json();
-                console.log('=== STATUS API RESPONSE ===');
-                console.log('orderStatus:', data.orderStatus);
-                console.log('orderId:', data.orderId);
-                console.log('orderNumber:', data.orderNumber);
-                console.log('testConfig.stageType:', testConfig.stageType);
-                console.log('===========================');
 
                 if (!response.ok || data.error) {
                     throw new Error(data.message || 'Ошибка в ответе API');
@@ -674,7 +675,7 @@
         }
 
         function displayOrderStatus(data) {
-            var status = String(data.orderStatus);  // ИСПРАВЛЕНО: преобразуем к строке!
+            var status = String(data.orderStatus);
             var statusInfo = statusMap[status] || { text: 'Неизвестный статус', class: 'status-0' };
             
             var statusBox = document.getElementById('status-box');
@@ -695,11 +696,20 @@
             document.getElementById('st-order-id').innerText = data.orderId || testConfig.orderId || '-';
             document.getElementById('st-order-number').innerText = data.orderNumber || '-';
             
-            var amount = data.amount ? (parseFloat(data.amount) / 100).toFixed(2) : '-';
+            // Сумма преавторизации (изначальная сумма заказа)
+            var preAuthAmount = testConfig.preAuthAmount || (data.amount ? (parseFloat(data.amount) / 100).toFixed(2) : '-');
+            document.getElementById('st-preauth-amount').innerText = preAuthAmount + ' ' + (currencyMap[data.currency] || data.currency || '');
+            
+            // Сумма завершения (если есть)
+            if (data.completedAmount) {
+                document.getElementById('row-completed-amount').style.display = 'flex';
+                document.getElementById('st-completed-amount').innerText = data.completedAmount + ' ' + (currencyMap[data.currency] || data.currency || '');
+            } else {
+                document.getElementById('row-completed-amount').style.display = 'none';
+            }
+            
             var currencyCode = data.currency || '933';
             var currencyName = currencyMap[currencyCode] || currencyCode;
-            
-            document.getElementById('st-amount').innerText = amount;
             document.getElementById('st-currency').innerText = currencyName;
             
             if (data.cardAuthInfo && data.cardAuthInfo.maskedPan) {
@@ -722,43 +732,74 @@
                 document.getElementById('error-description-block').style.display = 'none';
             }
             
-            console.log('Checking buttons - stageType:', testConfig.stageType, 'status:', status);
-            
+            // Кнопки действий для статуса 1 (Подтвержден) + двухстадийный
             if (testConfig.stageType === 'two-stage' && status === '1') {
                 document.getElementById('action-buttons').style.display = 'block';
-                console.log('✅ Buttons SHOWN!');
             } else {
                 document.getElementById('action-buttons').style.display = 'none';
-                console.log('❌ Buttons HIDDEN - stageType:', testConfig.stageType, 'status:', status);
             }
         }
 
-        async function completeTwoStageOrder() {
+        // Показать экран ввода суммы завершения
+        function showCompleteAmountScreen() {
+            // Устанавливаем максимальную сумму (изначальная сумма заказа)
+            var maxAmount = testConfig.preAuthAmount || '0.00';
+            document.getElementById('max-amount').innerText = maxAmount;
+            document.getElementById('complete-amount').value = maxAmount;
+            document.getElementById('complete-amount-error').classList.remove('show');
+            
+            showScreen('screen-complete-amount');
+        }
+
+        // Отправка суммы завершения
+        async function submitCompleteAmount() {
+            var amountInput = document.getElementById('complete-amount');
+            var errorEl = document.getElementById('complete-amount-error');
+            var amount = amountInput.value.trim();
+            
+            if (!amount || !isValidAmount(amount)) {
+                errorEl.classList.add('show');
+                amountInput.focus();
+                return;
+            }
+            
             if (!testConfig.orderId) {
                 alert('Ошибка: нет orderId');
                 return;
             }
-            if (!confirm('Завершить двухстадийный заказ?')) return;
             
             try {
+                // Отправляем запрос на завершение
                 var response = await fetch('/api/complete-order', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ orderId: testConfig.orderId })
+                    body: JSON.stringify({ 
+                        orderId: testConfig.orderId,
+                        amount: amount  // Сумма завершения
+                    })
                 });
+                
                 var data = await response.json();
                 
                 if (!response.ok || data.error) {
                     throw new Error(data.message || 'Ошибка при завершении заказа');
                 }
+                
+                // Сохраняем сумму завершения для отображения
+                testConfig.completedAmount = amount;
+                
                 alert('Заказ успешно завершён!');
+                // Перезагружаем статус
                 checkOrderStatus(testConfig.orderId);
+                
             } catch (error) {
+                console.error('Complete error:', error);
                 document.getElementById('errorMsg').innerText = error.message;
                 document.getElementById('errorModal').style.display = 'flex';
             }
         }
 
+        // Отмена двухстадийного заказа
         async function cancelTwoStageOrder() {
             if (!testConfig.orderId) {
                 alert('Ошибка: нет orderId');
@@ -805,6 +846,8 @@
         function clearErrors() {
             var errorEl = document.getElementById('amount-error');
             if (errorEl) errorEl.classList.remove('show');
+            var completeErrorEl = document.getElementById('complete-amount-error');
+            if (completeErrorEl) completeErrorEl.classList.remove('show');
         }
 
         function validateAmount(input) {
@@ -915,6 +958,7 @@
 
                 testConfig.orderId = data.orderId;
                 testConfig.orderNumber = data.orderNumber;
+                testConfig.preAuthAmount = data.amount;  // Сохраняем сумму преавторизации
                 saveToSession();
 
                 document.getElementById('res-order').innerText = data.orderNumber;
