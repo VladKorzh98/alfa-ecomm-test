@@ -351,11 +351,8 @@
     <header>
         <div class="logo-container">
             <svg class="logo-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                <!-- Буква А -->
                 <path d="M 50 10 L 20 85 L 32 85 L 38 68 L 62 68 L 68 85 L 80 85 Z" fill="#EF3124"/>
-                <!-- Поперечная черта буквы А -->
                 <rect x="40" y="52" width="20" height="8" fill="#EF3124"/>
-                <!-- Линия подчеркивания -->
                 <rect x="20" y="90" width="60" height="5" fill="#EF3124"/>
             </svg>
         </div>
@@ -453,7 +450,7 @@
                 <div class="error-message" id="complete-amount-error">Некорректная сумма</div>
             </div>
 
-            <button class="btn" onclick="submitCompleteAmount()">Завершить заказ</button>
+            <button class="btn" id="complete-submit-btn" onclick="submitCompleteAmount()">Завершить заказ</button>
             <button class="btn btn-secondary" onclick="showScreen('screen-status')">Отмена</button>
         </div>
 
@@ -527,9 +524,9 @@
 
     <div id="errorModal" class="modal" onclick="this.style.display='none'">
         <div class="modal-content" onclick="event.stopPropagation()">
-            <h3 style="color:#ef3124;margin-top:0">Ошибка API</h3>
+            <h3 style="color:#ef3124;margin-top:0">Ошибка</h3>
             <p id="errorMsg">Текст ошибки</p>
-            <button class="btn" onclick="document.getElementById('errorModal').style.display='none'">Закрыть</button>
+            <button class="btn" onclick="closeErrorModal()">Закрыть</button>
         </div>
     </div>
 
@@ -713,6 +710,7 @@
             var preAuthAmount = testConfig.preAuthAmount || (data.amount ? (parseFloat(data.amount) / 100).toFixed(2) : '-');
             document.getElementById('st-preauth-amount').innerText = preAuthAmount + ' ' + (currencyMap[data.currency] || data.currency || '');
             
+            // Показываем сумму завершения если она есть
             if (data.completedAmount) {
                 document.getElementById('row-completed-amount').style.display = 'flex';
                 document.getElementById('st-completed-amount').innerText = data.completedAmount + ' ' + (currencyMap[data.currency] || data.currency || '');
@@ -763,6 +761,7 @@
         async function submitCompleteAmount() {
             var amountInput = document.getElementById('complete-amount');
             var errorEl = document.getElementById('complete-amount-error');
+            var submitBtn = document.getElementById('complete-submit-btn');
             var amount = amountInput.value.trim();
             
             if (!amount || !isValidAmount(amount)) {
@@ -772,9 +771,13 @@
             }
             
             if (!testConfig.orderId) {
-                alert('Ошибка: нет orderId');
+                showErrorModal('Ошибка: нет orderId');
                 return;
             }
+            
+            // Блокируем кнопку во время запроса
+            submitBtn.disabled = true;
+            submitBtn.innerText = 'Обработка...';
             
             try {
                 var response = await fetch('/api/complete-order', {
@@ -792,16 +795,41 @@
                     throw new Error(data.message || 'Ошибка при завершении заказа');
                 }
                 
+                // Успешное завершение - показываем страницу статуса
                 testConfig.completedAmount = amount;
                 
-                alert('Заказ успешно завершён!');
-                checkOrderStatus(testConfig.orderId);
+                // Перезапрашиваем статус и показываем страницу
+                await checkOrderStatus(testConfig.orderId);
                 
             } catch (error) {
                 console.error('Complete error:', error);
-                document.getElementById('errorMsg').innerText = error.message;
-                document.getElementById('errorModal').style.display = 'flex';
+                
+                // Показываем ошибку и оставляем форму активной
+                showErrorModal(error.message);
+                
+                // Разблокируем кнопку через 7 секунд
+                setTimeout(function() {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = 'Завершить заказ';
+                }, 7000);
             }
+        }
+
+        function showErrorModal(message) {
+            var modal = document.getElementById('errorModal');
+            var errorMsg = document.getElementById('errorMsg');
+            
+            errorMsg.innerText = message;
+            modal.style.display = 'flex';
+            
+            // Автоматически закрываем через 7 секунд
+            setTimeout(function() {
+                modal.style.display = 'none';
+            }, 7000);
+        }
+
+        function closeErrorModal() {
+            document.getElementById('errorModal').style.display = 'none';
         }
 
         async function cancelTwoStageOrder() {
