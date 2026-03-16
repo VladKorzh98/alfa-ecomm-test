@@ -15,7 +15,6 @@ export default async function handler(req, res) {
   console.log('=== CHECK STATUS API START ===');
   console.log('orderId:', orderId);
   console.log('ALFA_USERNAME:', process.env.ALFA_USERNAME || 'default');
-  console.log('ALFA_PASSWORD set:', !!process.env.ALFA_PASSWORD);
 
   if (!orderId) {
     console.error('Missing orderId');
@@ -56,14 +55,14 @@ export default async function handler(req, res) {
     console.log('Success! orderStatus:', bankData.orderStatus);
 
     return res.status(200).json({
-      orderId: bankData.orderId,
+      orderId: bankData.orderId,           // Уникальный ID заказа
+      orderNumber: bankData.orderNumber,   // Номер заказа
       orderStatus: bankData.orderStatus,
-      orderNumber: bankData.orderNumber,
       amount: bankData.amount,
       currency: bankData.currency,
       authCode: bankData.authCode || null,
-      maskedPan: bankData.maskedPan || null,
       cardAuthInfo: {
+        maskedPan: bankData.cardAuthInfo?.maskedPan || null,  // Маска карты
         cardholderName: bankData.cardAuthInfo?.cardholderName || null,
         panLast: bankData.cardAuthInfo?.panLast || null,
         expiration: bankData.cardAuthInfo?.expiration || null
