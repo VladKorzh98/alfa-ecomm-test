@@ -9,7 +9,7 @@ export default async function handler(req, res) {
 
   const { orderId, amount } = req.body;
 
-  console.log('=== COMPLETE ORDER ===');
+  console.log('=== COMPLETE ORDER API ===');
   console.log('orderId:', orderId);
   console.log('amount:', amount);
 
@@ -34,6 +34,8 @@ export default async function handler(req, res) {
   params.append('amount', toMinorUnits(amount));
 
   try {
+    console.log('Sending deposit request to Alfa Bank...');
+    
     const depositResponse = await fetch('https://abby.rbsuat.com/payment/rest/deposit.do', {
       method: 'POST',
       headers: {
@@ -53,6 +55,7 @@ export default async function handler(req, res) {
 
     console.log('Deposit successful!');
 
+    // Запрашиваем статус после завершения
     const statusParams = new URLSearchParams();
     statusParams.append('userName', process.env.ALFA_USERNAME || 'ABB_3-api');
     statusParams.append('password', process.env.ALFA_PASSWORD || 'ABB_3*?1');
@@ -71,14 +74,10 @@ export default async function handler(req, res) {
     const statusData = await statusResponse.json();
     console.log('Status after complete:', statusData);
 
-    if (statusData.errorCode && statusData.errorCode !== '0' && statusData.errorCode !== 0) {
-      console.warn('Warning: Could not get status after complete:', statusData.errorMessage);
-    }
-
     return res.status(200).json({
       status: 'success',
       message: 'Заказ успешно завершён',
-      completedAmount: amount,  // Возвращаем сумму завершения
+      completedAmount: amount,
       orderStatus: statusData.orderStatus,
       orderId: statusData.orderId || orderId,
       orderNumber: statusData.orderNumber,
@@ -96,6 +95,7 @@ export default async function handler(req, res) {
   } catch (error) {
     console.error('=== CATCH ERROR ===');
     console.error(error);
+    console.error('Error message:', error.message);
     
     return res.status(500).json({
       error: 'complete_failed',
