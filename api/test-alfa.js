@@ -27,98 +27,115 @@ export default async function handler(req, res) {
 
   console.log('API Request:', { operation, registrationType, stageType, amount, currency, clientId });
 
-  if (operation === 'ecom') {
-    
-    if (!amount || !/^\d+(\.\d{1,2})?$/.test(amount)) {
-      return res.status(400).json({
-        error: 'invalid_amount',
-        message: 'Некорректная сумма'
-      });
-    }
-
-    if (!currency || !CURRENCY_CODES[currency]) {
-      return res.status(400).json({
-        error: 'invalid_currency',
-        message: 'Недопустимая валюта'
-      });
-    }
-
-    const orderNumber = generateOrderNumber();
-    const amountMinor = toMinorUnits(amount);
-    const currencyCode = CURRENCY_CODES[currency];
-    
-    const host = req.headers.host || process.env.VERCEL_URL || 'localhost';
-    const protocol = process.env.VERCEL_ENV === 'production' ? 'https' : 'http';
-    const returnUrl = `${protocol}://${host}/`;
-
-    const params = new URLSearchParams();
-    params.append('userName', process.env.ALFA_USERNAME || 'ABB_3-api');
-    params.append('password', process.env.ALFA_PASSWORD || 'ABB_3*?1');
-    params.append('amount', amountMinor);
-    params.append('currency', currencyCode);
-    params.append('orderNumber', orderNumber);
-    params.append('returnUrl', returnUrl);
-    
-    // Добавляем clientId если есть
-    if (clientId) {
-      params.append('clientId', clientId);
-    }
-    
-    if (stageType === 'one-stage') {
-      params.append('orderBinding', 'false');
-    }
-    if (registrationType === 'with-binding') {
-      params.append('orderBinding', 'true');
-    }
-
-    console.log('Sending to Alfa Bank:', { 
-      orderNumber: orderNumber,
-      amountMinor: amountMinor, 
-      currencyCode: currencyCode,
-      stageType: stageType,
-      clientId: clientId
+  // Поддерживаем операции: ecom и cit
+  if (operation !== 'ecom' && operation !== 'cit') {
+    return res.status(400).json({
+      error: 'unknown_operation',
+      message: 'Неизвестная операция. Поддерживаются: ecom, cit'
     });
-
-    try {
-      const endpoint = stageType === 'two-stage' 
-        ? 'https://abby.rbsuat.com/payment/rest/registerPreAuth.do'
-        : 'https://abby.rbsuat.com/payment/rest/register.do';
-
-      const bankResponse = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: params.toString()
-      });
-
-      const bankData = await bankResponse.json();
-      console.log('Alfa Bank response:', bankData);
-
-      if (!bankResponse.ok || bankData.errorCode) {
-        throw new Error(bankData.errorMessage || 'Ошибка от Альфа-Банка');
-      }
-
-      return res.status(200).json({
-        status: 'success',
-        message: 'Заказ зарегистрирован',
-        orderId: bankData.orderId,
-        orderNumber: orderNumber,
-        amount: amount,
-        currency: currency,
-        formUrl: bankData.formUrl,
-        bindingId: bankData.bindingId || null
-      });
-
-    } catch (error) {
-      console.error('Alfa Bank API error:', error);
-      return res.status(500).json({
-        error: 'bank_connection_error',
-        message: 'Не удалось связаться с Альфа-Банком: ' + error.message
-      });
-    }
   }
 
-  return res.status(400).json({
-    error: 'unknown_operation',
-    message: 'Неизвестная операция'
+  if (!amount || !/^\d+(\.\d{1,2})?$/.test(amount)) {
+    return res.status(400).json({
+      error: 'invalid_amount',
+      message: 'Некорректная сумма'
+    });
+  }
+
+  if (!currency || !CURRENCY_CODES[currency]) {
+    return res.status(400).json({
+      error: 'invalid_currency',
+      message: 'Недопустимая валюта'
+    });
+  }
+
+  const orderNumber = generateOrderNumber();
+  const amountMinor = toMinorUnits(amount);
+  const currencyCode = CURRENCY_CODES[currency];
+  
+  const host = req.headers.host || process.env.VERCEL_URL || 'localhost';
+  const protocol = process.env.VERCEL_ENV === 'production' ? 'https' : 'http';
+  const returnUrl = `${protocol}://${host}/`;
+
+  const params = new URLSearchParams();
+  params.append('userName', process.env.ALFA_USERNAME || 'ABB_3-api');
+  params.append('password', process.env.ALFA_PASSWORD || 'ABB_3*?1');
+  params.append('amount', amountMinor);
+  params.append('currency', currencyCode);
+  params.append('orderNumber', orderNumber);
+  params.append('returnUrl', returnUrl);
+  
+  // Добавляем clientId если есть (для CIT и с привязкой)
+  if (clientId) {
+    params.append('clientId', clientId);
+  }
+  
+  // Для CIT операций
+  if (operation === 'cit') {
+    params.append('mdOrder', 'true'); // Используем существующую привязку
+    console.log('CIT operation with clientId:', clientId);
+  }
+  
+  // Для регистрации с привязкой
+  if (registrationType === 'with-binding') {
+    params.append('orderBinding', 'true');
+  }
+  
+  if (stageType === 'one-stage') {
+    params.append('orderBinding', 'false');
+  }
+
+  console.log('Sending to Alfa Bank:', { 
+    orderNumber: orderNumber,
+    amountMinor: amountMinor, 
+    currencyCode: currencyCode,
+    stageType: stageType,
+    operation: operation,
+    clientId: clientId
   });
+
+  try {
+    // Определяем endpoint
+    let endpoint;
+    if (operation === 'cit') {
+      // Для CIT используем register.do (оплата по существующей привязке)
+      endpoint = 'https://abby.rbsuat.com/payment/rest/register.do';
+    } else {
+      // Для обычных Ecom операций
+      endpoint = stageType === 'two-stage' 
+        ? 'https://abby.rbsuat.com/payment/rest/registerPreAuth.do'
+        : 'https://abby.rbsuat.com/payment/rest/register.do';
+    }
+
+    const bankResponse = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString()
+    });
+
+    const bankData = await bankResponse.json();
+    console.log('Alfa Bank response:', bankData);
+
+    if (!bankResponse.ok || bankData.errorCode) {
+      throw new Error(bankData.errorMessage || 'Ошибка от Альфа-Банка');
+    }
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'Заказ зарегистрирован',
+      orderId: bankData.orderId,
+      orderNumber: orderNumber,
+      amount: amount,
+      currency: currency,
+      formUrl: bankData.formUrl,
+      bindingId: bankData.bindingId || null
+    });
+
+  } catch (error) {
+    console.error('Alfa Bank API error:', error);
+    return res.status(500).json({
+      error: 'bank_connection_error',
+      message: 'Не удалось связаться с Альфа-Банком: ' + error.message
+    });
+  }
 }
