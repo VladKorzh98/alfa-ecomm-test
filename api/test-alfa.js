@@ -27,11 +27,11 @@ export default async function handler(req, res) {
 
   console.log('API Request:', { operation, registrationType, stageType, amount, currency, clientId });
 
-  // Поддерживаем операции: ecom и cit
-  if (operation !== 'ecom' && operation !== 'cit') {
+  // Поддерживаем операции: ecom, cit и mit
+  if (operation !== 'ecom' && operation !== 'cit' && operation !== 'mit') {
     return res.status(400).json({
       error: 'unknown_operation',
-      message: 'Неизвестная операция. Поддерживаются: ecom, cit'
+      message: 'Неизвестная операция. Поддерживаются: ecom, cit, mit'
     });
   }
 
@@ -65,14 +65,9 @@ export default async function handler(req, res) {
   params.append('orderNumber', orderNumber);
   params.append('returnUrl', returnUrl);
   
-  // Добавляем clientId если есть (для CIT и с привязкой)
+  // Добавляем clientId если есть (для CIT, MIT и с привязкой)
   if (clientId) {
     params.append('clientId', clientId);
-  }
-  
-  // Для CIT операций
-  if (operation === 'cit') {
-    console.log('CIT operation with clientId:', clientId);
   }
   
   // Для регистрации с привязкой
