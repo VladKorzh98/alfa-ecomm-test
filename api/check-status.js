@@ -52,12 +52,17 @@ export default async function handler(req, res) {
     console.log('bankData.orderId:', bankData.orderId);
     console.log('bankData.orderStatus:', bankData.orderStatus);
     console.log('bankData.bindingInfo:', bankData.bindingInfo);
+    console.log('bankData.authRefNum (RRN):', bankData.authRefNum);
     
     // Извлекаем bindingId из bindingInfo.bindingId
     const bindingId = bankData.bindingInfo?.bindingId || null;
     console.log('Extracted bindingId:', bindingId);
+    
+    // Получаем RRN из authRefNum
+    const rrn = bankData.authRefNum || null;
+    console.log('RRN:', rrn);
 
-    // Возвращаем данные с bindingId
+    // Возвращаем данные с bindingId и RRN
     return res.status(200).json({
       orderId: bankData.orderId || orderId,
       orderNumber: orderNumber,
@@ -67,6 +72,7 @@ export default async function handler(req, res) {
       authCode: bankData.authCode || null,
       actionCodeDescription: bankData.actionCodeDescription || null,
       bindingId: bindingId,
+      rrn: rrn,  // Добавляем RRN в ответ
       cardAuthInfo: {
         maskedPan: bankData.cardAuthInfo?.maskedPan || null,
         cardholderName: bankData.cardAuthInfo?.cardholderName || null,
