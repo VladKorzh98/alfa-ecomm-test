@@ -1203,20 +1203,16 @@
         }
 
         function checkAndProceed(stageType) {
-            testConfig.stageType = stageType;
-            
-            if (stageType === 'two-stage' || (testConfig.registrationType === 'no-binding' && stageType === 'one-stage')) {
-                var amountInput = document.getElementById('amount');
-                var currencySelect = document.getElementById('currency');
-                var clientIdGroup = document.getElementById('client-id-group');
-                
-                if (amountInput) amountInput.value = '';
-                if (currencySelect) currencySelect.value = 'BYN';
-                
-                // Показываем поле clientId только для операций с привязкой
-                if (clientIdGroup) {
-                    clientIdGroup.style.display = (testConfig.registrationType === 'with-binding') ? 'block' : 'none';
-                }
+    testConfig.stageType = stageType;
+    
+    // Всегда показываем форму ввода для:
+    // 1. Двухстадийных (любых)
+    // 2. Одностадийных без привязки
+    // 3. Одностадийных с привязкой
+    var amountInput = document.getElementById('amount');
+    var currencySelect = document.getElementById('currency');
+    var clientIdGroup = document.getElementById('client-id-group');
+…}
                 
                 showScreen('screen-ecom-input');
             } else {
