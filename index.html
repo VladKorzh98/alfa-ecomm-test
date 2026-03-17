@@ -36,31 +36,8 @@
             text-align: center;
         }
 
+        /* Основной стиль кнопок - белый с красной рамкой */
         .btn {
-            background: linear-gradient(135deg, #ef3124 0%, #d12015 100%);
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            font-size: 16px;
-            border-radius: 8px;
-            cursor: pointer;
-            width: 100%;
-            margin: 10px 0;
-            font-weight: bold;
-            box-shadow: 0 4px 6px rgba(239, 49, 36, 0.3);
-            transition: all 0.2s;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(239, 49, 36, 0.4);
-        }
-
-        .btn:active {
-            transform: translateY(0);
-        }
-
-        .btn-secondary {
             background: white;
             color: #ef3124;
             border: 2px solid #ef3124;
@@ -75,47 +52,15 @@
             transition: all 0.2s;
         }
 
-        .btn-secondary:hover {
+        .btn:hover {
             background: #ef3124;
             color: white;
             transform: translateY(-2px);
             box-shadow: 0 6px 12px rgba(239, 49, 36, 0.4);
         }
 
-        .btn-pay {
-            background: linear-gradient(135deg, #28a745 0%, #218838 100%);
-            color: white;
-            border: none;
-            box-shadow: 0 4px 6px rgba(40, 167, 69, 0.3);
-        }
-
-        .btn-pay:hover {
-            background: linear-gradient(135deg, #218838 0%, #1e7e34 100%);
-            box-shadow: 0 6px 12px rgba(40, 167, 69, 0.4);
-        }
-
-        .btn-warning {
-            background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
-            color: #000;
-            border: none;
-            box-shadow: 0 4px 6px rgba(255, 193, 7, 0.3);
-        }
-
-        .btn-warning:hover {
-            background: linear-gradient(135deg, #e0a800 0%, #c69500 100%);
-            box-shadow: 0 6px 12px rgba(255, 193, 7, 0.4);
-        }
-
-        .btn-danger {
-            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
-            color: white;
-            border: none;
-            box-shadow: 0 4px 6px rgba(220, 53, 69, 0.3);
-        }
-
-        .btn-danger:hover {
-            background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
-            box-shadow: 0 6px 12px rgba(220, 53, 69, 0.4);
+        .btn:active {
+            transform: translateY(0);
         }
 
         .btn-small {
@@ -484,19 +429,19 @@
             <div class="breadcrumb"><span onclick="showScreen('screen-welcome')">← На главную</span></div>
             <h1>Выберите тип операций</h1>
             <button class="btn" onclick="selectOperationType('ecom')">Ecom-операции</button>
-            <button class="btn btn-secondary" onclick="selectOperationType('p2p')">P2P-операции</button>
+            <button class="btn" onclick="selectOperationType('p2p')">P2P-операции</button>
         </div>
 
         <div id="screen-ecom-type" class="screen">
-    <div class="breadcrumb"><span onclick="showScreen('screen-select')">← Назад</span></div>
-    <h1>Тип операции Ecom</h1>
-    <p>Выберите тип операции:</p>
-    <button class="btn" onclick="selectEcomType('no-binding')">Без привязки карты</button>
-    <button class="btn" onclick="selectEcomType('with-binding')">С привязкой карты</button>
-    <button class="btn" onclick="selectOperationType('cit')">Оплата по связке (CIT)</button>
-    <button class="btn" onclick="selectOperationType('mit')">Оплата по связке (MIT)</button>
-    <button class="btn" onclick="showScreen('screen-refund-lookup')">Возврат</button>
-</div>
+            <div class="breadcrumb"><span onclick="showScreen('screen-select')">← Назад</span></div>
+            <h1>Тип операции Ecom</h1>
+            <p>Выберите тип операции:</p>
+            <button class="btn" onclick="selectEcomType('no-binding')">Без привязки карты</button>
+            <button class="btn" onclick="selectEcomType('with-binding')">С привязкой карты</button>
+            <button class="btn" onclick="selectOperationType('cit')">Оплата по связке (CIT)</button>
+            <button class="btn" onclick="selectOperationType('mit')">Оплата по связке (MIT)</button>
+            <button class="btn" onclick="showScreen('screen-refund-lookup')">Возврат</button>
+        </div>
 
         <div id="screen-refund-lookup" class="screen">
             <div class="breadcrumb"><span onclick="showScreen('screen-ecom-type')">← Назад</span></div>
@@ -511,7 +456,7 @@
             </div>
 
             <button class="btn" onclick="checkRefundOrder()">Проверить заказ</button>
-            <button class="btn btn-secondary" onclick="showScreen('screen-ecom-type')">Назад</button>
+            <button class="btn" onclick="showScreen('screen-ecom-type')">Назад</button>
         </div>
 
         <div id="screen-refund-amount" class="screen">
@@ -527,7 +472,7 @@
             </div>
 
             <button class="btn" id="refund-submit-btn" onclick="submitRefund()">Выполнить возврат</button>
-            <button class="btn btn-secondary" onclick="showScreen('screen-refund-lookup')">Отмена</button>
+            <button class="btn" onclick="showScreen('screen-refund-lookup')">Отмена</button>
         </div>
 
         <div id="screen-cit-stage" class="screen">
@@ -535,7 +480,7 @@
             <h1>Оплата по связке (CIT)</h1>
             <p>Выберите стадийность платежа:</p>
             <button class="btn" onclick="checkAndProceed('one-stage')">Одностадийный</button>
-            <button class="btn btn-secondary" onclick="checkAndProceed('two-stage')">Двухстадийный</button>
+            <button class="btn" onclick="checkAndProceed('two-stage')">Двухстадийный</button>
         </div>
 
         <div id="screen-mit-stage" class="screen">
@@ -543,7 +488,7 @@
             <h1>Оплата по связке (MIT)</h1>
             <p>Выберите стадийность платежа:</p>
             <button class="btn" onclick="checkAndProceed('one-stage')">Одностадийный</button>
-            <button class="btn btn-secondary" onclick="checkAndProceed('two-stage')">Двухстадийный</button>
+            <button class="btn" onclick="checkAndProceed('two-stage')">Двухстадийный</button>
         </div>
 
         <div id="screen-ecom-stage" class="screen">
@@ -551,7 +496,7 @@
             <h1>Тип оплаты</h1>
             <p>Выберите стадийность платежа:</p>
             <button class="btn" onclick="checkAndProceed('one-stage')">Одностадийный</button>
-            <button class="btn btn-secondary" onclick="checkAndProceed('two-stage')">Двухстадийный</button>
+            <button class="btn" onclick="checkAndProceed('two-stage')">Двухстадийный</button>
         </div>
 
         <div id="screen-ecom-input" class="screen">
@@ -584,7 +529,7 @@
             </div>
 
             <button class="btn" onclick="submitPaymentData()">Продолжить</button>
-            <button class="btn btn-secondary" onclick="showScreen('screen-ecom-stage')">Назад</button>
+            <button class="btn" onclick="showScreen('screen-ecom-stage')">Назад</button>
         </div>
 
         <div id="screen-card-select" class="screen">
@@ -599,7 +544,7 @@
             <div class="breadcrumb"><span onclick="showScreen('screen-select')">← Назад</span></div>
             <h1>P2P-операции</h1>
             <p>Функционал в разработке</p>
-            <button class="btn btn-secondary" onclick="showScreen('screen-select')">Назад</button>
+            <button class="btn" onclick="showScreen('screen-select')">Назад</button>
         </div>
 
         <div id="screen-process" class="screen">
@@ -614,8 +559,8 @@
                 <div><strong>Валюта:</strong> <span id="res-currency"></span></div>
             </div>
 
-            <button class="btn btn-secondary" id="backBtn" onclick="showScreen('screen-ecom-stage')" style="display:none">Вернуться</button>
-            <button class="btn btn-pay" id="payBtn" style="display:none">Перейти к оплате →</button>
+            <button class="btn" id="backBtn" onclick="showScreen('screen-ecom-stage')" style="display:none">Вернуться</button>
+            <button class="btn" id="payBtn" style="display:none">Перейти к оплате →</button>
         </div>
 
         <div id="screen-complete-amount" class="screen">
@@ -631,7 +576,7 @@
             </div>
 
             <button class="btn" id="complete-submit-btn" onclick="submitCompleteAmount()">Завершить заказ</button>
-            <button class="btn btn-secondary" onclick="showScreen('screen-status')">Отмена</button>
+            <button class="btn" onclick="showScreen('screen-status')">Отмена</button>
         </div>
 
         <div id="screen-status" class="screen">
@@ -849,7 +794,7 @@
                 var html = '<div style="font-size: 12px; color: #666; margin-top: 5px;">Сохраненные clientId:</div>';
                 html += '<div style="display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px;">';
                 savedClientIds.forEach(function(id) {
-                    html += '<button type="button" class="btn-small btn-secondary" onclick="selectClientId(\'' + id + '\')" style="cursor: pointer;">' + id + '</button>';
+                    html += '<button type="button" class="btn btn-small" onclick="selectClientId(\'' + id + '\')" style="cursor: pointer;">' + id + '</button>';
                 });
                 html += '</div>';
                 container.innerHTML = html;
