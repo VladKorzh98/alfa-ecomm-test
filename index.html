@@ -18,17 +18,6 @@
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             display: flex;
             align-items: center;
-            gap: 15px;
-        }
-
-        .logo-container {
-            display: flex;
-            align-items: center;
-        }
-
-        .logo-svg {
-            width: 40px;
-            height: 40px;
         }
 
         .brand-name {
@@ -48,39 +37,57 @@
         }
 
         .btn {
-            background-color: #ef3124;
+            background: linear-gradient(135deg, #ef3124 0%, #d12015 100%);
             color: white;
             border: none;
             padding: 15px 30px;
             font-size: 16px;
-            border-radius: 5px;
+            border-radius: 8px;
             cursor: pointer;
             width: 100%;
             margin: 10px 0;
             font-weight: bold;
+            box-shadow: 0 4px 6px rgba(239, 49, 36, 0.3);
+            transition: all 0.2s;
         }
 
         .btn:hover {
-            background-color: #d12015;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(239, 49, 36, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
         }
 
         .btn-secondary {
-            background-color: white;
-            color: #333;
-            border: 2px solid #ddd;
+            background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            margin: 10px 0;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(108, 117, 125, 0.3);
+            transition: all 0.2s;
         }
 
         .btn-secondary:hover {
-            border-color: #ef3124;
-            color: #ef3124;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(108, 117, 125, 0.4);
         }
 
         .btn-pay {
-            background-color: #28a745;
+            background: linear-gradient(135deg, #28a745 0%, #218838 100%);
+            box-shadow: 0 4px 6px rgba(40, 167, 69, 0.3);
         }
 
         .btn-pay:hover {
-            background-color: #218838;
+            background: linear-gradient(135deg, #218838 0%, #1e7e34 100%);
+            box-shadow: 0 6px 12px rgba(40, 167, 69, 0.4);
         }
 
         .btn-small {
@@ -88,15 +95,18 @@
             font-size: 14px;
             width: auto;
             margin: 5px 0;
+            border-radius: 6px;
         }
 
         .btn-warning {
-            background-color: #ffc107;
+            background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
             color: #000;
+            box-shadow: 0 4px 6px rgba(255, 193, 7, 0.3);
         }
 
         .btn-warning:hover {
-            background-color: #e0a800;
+            background: linear-gradient(135deg, #e0a800 0%, #c69500 100%);
+            box-shadow: 0 6px 12px rgba(255, 193, 7, 0.4);
         }
 
         .screen {
@@ -394,6 +404,7 @@
             cursor: pointer;
             font-size: 12px;
             margin-top: 8px;
+            transition: all 0.2s;
         }
 
         .edit-btn:hover {
@@ -441,14 +452,6 @@
 <body>
 
     <header>
-        <div class="logo-container">
-            <svg class="logo-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                <!-- Буква А -->
-                <path d="M50 20 L20 85 L32 85 L40 62 L60 62 L68 85 L80 85 Z M45 54 L50 38 L55 54 Z" fill="#EF3124"/>
-                <!-- Подчеркивание -->
-                <rect x="20" y="92" width="60" height="5" fill="#EF3124"/>
-            </svg>
-        </div>
         <div class="brand-name">API ECOM Testing</div>
     </header>
 
