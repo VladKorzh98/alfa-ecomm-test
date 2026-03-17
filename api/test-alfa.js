@@ -23,9 +23,9 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { operation, registrationType, stageType, amount, currency } = req.body;
+  const { operation, registrationType, stageType, amount, currency, clientId } = req.body;
 
-  console.log('API Request:', { operation, registrationType, stageType, amount, currency });
+  console.log('API Request:', { operation, registrationType, stageType, amount, currency, clientId });
 
   if (operation === 'ecom') {
     
@@ -59,23 +59,27 @@ export default async function handler(req, res) {
     params.append('orderNumber', orderNumber);
     params.append('returnUrl', returnUrl);
     
+    // Добавляем clientId если есть
+    if (clientId) {
+      params.append('clientId', clientId);
+    }
+    
     if (stageType === 'one-stage') {
       params.append('orderBinding', 'false');
     }
     if (registrationType === 'with-binding') {
       params.append('orderBinding', 'true');
-      params.append('clientId', 'client_' + Date.now());
     }
 
     console.log('Sending to Alfa Bank:', { 
       orderNumber: orderNumber,
       amountMinor: amountMinor, 
       currencyCode: currencyCode,
-      stageType: stageType
+      stageType: stageType,
+      clientId: clientId
     });
 
     try {
-      // ДЛЯ ДВУХСТАДИЙНЫХ: используем registerPreAuth.do
       const endpoint = stageType === 'two-stage' 
         ? 'https://abby.rbsuat.com/payment/rest/registerPreAuth.do'
         : 'https://abby.rbsuat.com/payment/rest/register.do';
@@ -100,7 +104,8 @@ export default async function handler(req, res) {
         orderNumber: orderNumber,
         amount: amount,
         currency: currency,
-        formUrl: bankData.formUrl
+        formUrl: bankData.formUrl,
+        bindingId: bankData.bindingId || null
       });
 
     } catch (error) {
