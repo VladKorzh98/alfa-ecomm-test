@@ -422,25 +422,24 @@
             <button class="btn" onclick="showScreen('screen-select')">Начать тестирование</button>
         </div>
 
-        <div id="screen-ecom-type" class="screen">
-    <div class="breadcrumb"><span onclick="showScreen('screen-select')">← Назад</span></div>
-    <h1>Тип операции Ecom</h1>
-    <p>Выберите тип операции:</p>
-    <button class="btn" onclick="selectEcomType('no-binding')">Без привязки карты</button>
-    <button class="btn btn-secondary" onclick="selectEcomType('with-binding')">С привязкой карты</button>
-    <button class="btn btn-warning" onclick="selectOperationType('cit')">Оплата по связке (CIT)</button>
-</div>
+        <div id="screen-select" class="screen">
+            <div class="breadcrumb"><span onclick="showScreen('screen-welcome')">← На главную</span></div>
+            <h1>Выберите тип операций</h1>
+            <button class="btn" onclick="selectOperationType('ecom')">Ecom-операции</button>
+            <button class="btn btn-secondary" onclick="selectOperationType('p2p')">P2P-операции</button>
+        </div>
 
         <div id="screen-ecom-type" class="screen">
             <div class="breadcrumb"><span onclick="showScreen('screen-select')">← Назад</span></div>
-            <h1>Регистрация заказа</h1>
-            <p>Выберите тип регистрации заказа:</p>
+            <h1>Тип операции Ecom</h1>
+            <p>Выберите тип операции:</p>
             <button class="btn" onclick="selectEcomType('no-binding')">Без привязки карты</button>
             <button class="btn btn-secondary" onclick="selectEcomType('with-binding')">С привязкой карты</button>
+            <button class="btn btn-warning" onclick="selectOperationType('cit')">Оплата по связке (CIT)</button>
         </div>
 
         <div id="screen-cit-stage" class="screen">
-            <div class="breadcrumb"><span onclick="showScreen('screen-select')">← Назад</span></div>
+            <div class="breadcrumb"><span onclick="showScreen('screen-ecom-type')">← Назад</span></div>
             <h1>Оплата по связке (CIT)</h1>
             <p>Выберите стадийность платежа:</p>
             <button class="btn" onclick="checkAndProceed('one-stage')">Одностадийный</button>
