@@ -488,15 +488,15 @@
         </div>
 
         <div id="screen-ecom-type" class="screen">
-            <div class="breadcrumb"><span onclick="showScreen('screen-select')">← Назад</span></div>
-            <h1>Тип операции Ecom</h1>
-            <p>Выберите тип операции:</p>
-            <button class="btn" onclick="selectEcomType('no-binding')">Без привязки карты</button>
-            <button class="btn btn-secondary" onclick="selectEcomType('with-binding')">С привязкой карты</button>
-            <button class="btn btn-warning" onclick="selectOperationType('cit')">Оплата по связке (CIT)</button>
-            <button class="btn btn-secondary" onclick="selectOperationType('mit')">Оплата по связке (MIT)</button>
-            <button class="btn btn-danger" onclick="showScreen('screen-refund-lookup')">Возврат</button>
-        </div>
+    <div class="breadcrumb"><span onclick="showScreen('screen-select')">← Назад</span></div>
+    <h1>Тип операции Ecom</h1>
+    <p>Выберите тип операции:</p>
+    <button class="btn" onclick="selectEcomType('no-binding')">Без привязки карты</button>
+    <button class="btn" onclick="selectEcomType('with-binding')">С привязкой карты</button>
+    <button class="btn" onclick="selectOperationType('cit')">Оплата по связке (CIT)</button>
+    <button class="btn" onclick="selectOperationType('mit')">Оплата по связке (MIT)</button>
+    <button class="btn" onclick="showScreen('screen-refund-lookup')">Возврат</button>
+</div>
 
         <div id="screen-refund-lookup" class="screen">
             <div class="breadcrumb"><span onclick="showScreen('screen-ecom-type')">← Назад</span></div>
