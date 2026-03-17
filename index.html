@@ -428,6 +428,13 @@
                 </select>
             </div>
 
+            <div class="form-group" id="client-id-group" style="display:none">
+                <label for="client-id">Идентификатор клиента (clientId)</label>
+                <input type="text" id="client-id" placeholder="client_123456" list="client-id-list">
+                <datalist id="client-id-list"></datalist>
+                <div class="form-hint">Введите новый или выберите из списка</div>
+            </div>
+
             <button class="btn" onclick="submitPaymentData()">Продолжить</button>
             <button class="btn btn-secondary" onclick="showScreen('screen-ecom-stage')">Назад</button>
         </div>
@@ -511,7 +518,7 @@
                         <span class="result-label">Номер заказа:</span>
                         <span class="result-value" id="st-order-number"></span>
                     </div>
-                    <div class="result-row" id="row-preauth-amount">
+                    <div class="result-row">
                         <span class="result-label">Сумма преавторизации:</span>
                         <span class="result-value" id="st-preauth-amount"></span>
                     </div>
@@ -526,6 +533,14 @@
                     <div class="result-row" id="row-refunded-amount" style="display:none">
                         <span class="result-label">Сумма отмены:</span>
                         <span class="result-value" id="st-refunded-amount"></span>
+                    </div>
+                    <div class="result-row" id="row-client-id" style="display:none">
+                        <span class="result-label">Идентификатор клиента:</span>
+                        <span class="result-value" id="st-client-id"></span>
+                    </div>
+                    <div class="result-row" id="row-binding-id" style="display:none">
+                        <span class="result-label">ID связки (bindingId):</span>
+                        <span class="result-value" id="st-binding-id"></span>
                     </div>
                     <div class="result-row">
                         <span class="result-label">Валюта:</span>
@@ -583,11 +598,13 @@
             stageType: '',
             amount: '',
             currency: '',
+            clientId: '',
             orderId: '',
             orderNumber: '',
             preAuthAmount: '',
             completedAmount: '',
-            refundedAmount: ''
+            refundedAmount: '',
+            bindingId: ''
         };
 
         var statusMap = {
@@ -611,8 +628,32 @@
 
         window.addEventListener('DOMContentLoaded', function() {
             restoreFromSession();
+            loadClientIds();
             checkReturnUrl();
         });
+
+        function loadClientIds() {
+            var savedClientIds = JSON.parse(sessionStorage.getItem('clientIds') || '[]');
+            var datalist = document.getElementById('client-id-list');
+            if (datalist) {
+                datalist.innerHTML = '';
+                savedClientIds.forEach(function(id) {
+                    var option = document.createElement('option');
+                    option.value = id;
+                    datalist.appendChild(option);
+                });
+            }
+        }
+
+        function saveClientId(clientId) {
+            if (!clientId) return;
+            var savedClientIds = JSON.parse(sessionStorage.getItem('clientIds') || '[]');
+            if (savedClientIds.indexOf(clientId) === -1) {
+                savedClientIds.push(clientId);
+                sessionStorage.setItem('clientIds', JSON.stringify(savedClientIds));
+            }
+            loadClientIds();
+        }
 
         function restoreFromSession() {
             var savedOrderId = sessionStorage.getItem('orderId');
@@ -621,6 +662,8 @@
             var savedPreAuthAmount = sessionStorage.getItem('preAuthAmount');
             var savedCompletedAmount = sessionStorage.getItem('completedAmount');
             var savedRefundedAmount = sessionStorage.getItem('refundedAmount');
+            var savedClientId = sessionStorage.getItem('clientId');
+            var savedBindingId = sessionStorage.getItem('bindingId');
             
             if (savedOrderId) testConfig.orderId = savedOrderId;
             if (savedOrderNumber) testConfig.orderNumber = savedOrderNumber;
@@ -628,6 +671,8 @@
             if (savedPreAuthAmount) testConfig.preAuthAmount = savedPreAuthAmount;
             if (savedCompletedAmount) testConfig.completedAmount = savedCompletedAmount;
             if (savedRefundedAmount) testConfig.refundedAmount = savedRefundedAmount;
+            if (savedClientId) testConfig.clientId = savedClientId;
+            if (savedBindingId) testConfig.bindingId = savedBindingId;
         }
 
         function saveToSession() {
@@ -637,14 +682,19 @@
             if (testConfig.preAuthAmount) sessionStorage.setItem('preAuthAmount', testConfig.preAuthAmount);
             if (testConfig.completedAmount) sessionStorage.setItem('completedAmount', testConfig.completedAmount);
             if (testConfig.refundedAmount) sessionStorage.setItem('refundedAmount', testConfig.refundedAmount);
+            if (testConfig.clientId) {
+                sessionStorage.setItem('clientId', testConfig.clientId);
+                saveClientId(testConfig.clientId);
+            }
+            if (testConfig.bindingId) sessionStorage.setItem('bindingId', testConfig.bindingId);
         }
 
         function clearSession() {
             sessionStorage.clear();
             testConfig = {
                 operationType: '', registrationType: '', stageType: '',
-                amount: '', currency: '', orderId: '', orderNumber: '', 
-                preAuthAmount: '', completedAmount: '', refundedAmount: ''
+                amount: '', currency: '', clientId: '', orderId: '', orderNumber: '', 
+                preAuthAmount: '', completedAmount: '', refundedAmount: '', bindingId: ''
             };
         }
 
@@ -806,7 +856,6 @@
             var refundedEl = document.getElementById('st-refunded-amount');
             
             if (testConfig.stageType === 'two-stage') {
-                // Для двухстадийных
                 if (rowPreAuth) rowPreAuth.style.display = 'flex';
                 if (rowAmount) rowAmount.style.display = 'none';
                 
@@ -827,7 +876,6 @@
                     if (rowRefunded) rowRefunded.style.display = 'none';
                 }
             } else {
-                // Для одностадийных
                 if (rowPreAuth) rowPreAuth.style.display = 'none';
                 if (rowAmount) rowAmount.style.display = 'flex';
                 if (rowCompleted) rowCompleted.style.display = 'none';
@@ -837,6 +885,27 @@
                     var amount = data.amount ? (parseFloat(data.amount) / 100).toFixed(2) : '-';
                     amountEl.innerText = amount + ' ' + currencyName;
                 }
+            }
+            
+            // Показываем clientId и bindingId для операций с привязкой
+            var rowClientId = document.getElementById('row-client-id');
+            var rowBindingId = document.getElementById('row-binding-id');
+            var clientIdEl = document.getElementById('st-client-id');
+            var bindingIdEl = document.getElementById('st-binding-id');
+            
+            if (testConfig.registrationType === 'with-binding') {
+                if (rowClientId) rowClientId.style.display = 'flex';
+                if (clientIdEl) clientIdEl.innerText = testConfig.clientId || '-';
+                
+                if (testConfig.bindingId || data.bindingId) {
+                    if (rowBindingId) rowBindingId.style.display = 'flex';
+                    if (bindingIdEl) bindingIdEl.innerText = testConfig.bindingId || data.bindingId || '-';
+                } else {
+                    if (rowBindingId) rowBindingId.style.display = 'none';
+                }
+            } else {
+                if (rowClientId) rowClientId.style.display = 'none';
+                if (rowBindingId) rowBindingId.style.display = 'none';
             }
             
             if (cardEl) {
@@ -1139,8 +1208,16 @@
             if (stageType === 'two-stage' || (testConfig.registrationType === 'no-binding' && stageType === 'one-stage')) {
                 var amountInput = document.getElementById('amount');
                 var currencySelect = document.getElementById('currency');
+                var clientIdGroup = document.getElementById('client-id-group');
+                
                 if (amountInput) amountInput.value = '';
                 if (currencySelect) currencySelect.value = 'BYN';
+                
+                // Показываем поле clientId только для операций с привязкой
+                if (clientIdGroup) {
+                    clientIdGroup.style.display = (testConfig.registrationType === 'with-binding') ? 'block' : 'none';
+                }
+                
                 showScreen('screen-ecom-input');
             } else {
                 testConfig.amount = '1.00';
@@ -1152,17 +1229,28 @@
         function submitPaymentData() {
             var amountInput = document.getElementById('amount');
             var currencySelect = document.getElementById('currency');
+            var clientIdInput = document.getElementById('client-id');
             var errorEl = document.getElementById('amount-error');
             var amount = amountInput ? amountInput.value.trim() : '';
             var currency = currencySelect ? currencySelect.value : 'BYN';
+            var clientId = clientIdInput ? clientIdInput.value.trim() : '';
             
             if (!amount || !isValidAmount(amount)) {
                 if (errorEl) errorEl.classList.add('show');
                 if (amountInput) amountInput.focus();
                 return;
             }
+            
+            // Для операций с привязкой проверяем clientId
+            if (testConfig.registrationType === 'with-binding' && !clientId) {
+                showResultToast('Для операций с привязкой необходимо указать clientId', false);
+                if (clientIdInput) clientIdInput.focus();
+                return;
+            }
+            
             testConfig.amount = amount;
             testConfig.currency = currency;
+            testConfig.clientId = clientId;
             runEcomTest();
         }
 
@@ -1190,16 +1278,23 @@
             if (resultDetails) resultDetails.style.display = 'none';
 
             try {
+                var requestBody = {
+                    operation: 'ecom',
+                    registrationType: testConfig.registrationType,
+                    stageType: testConfig.stageType,
+                    amount: testConfig.amount || '1.00',
+                    currency: testConfig.currency || 'BYN'
+                };
+                
+                // Добавляем clientId если есть
+                if (testConfig.clientId) {
+                    requestBody.clientId = testConfig.clientId;
+                }
+
                 var response = await fetch('/api/test-alfa', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        operation: 'ecom',
-                        registrationType: testConfig.registrationType,
-                        stageType: testConfig.stageType,
-                        amount: testConfig.amount || '1.00',
-                        currency: testConfig.currency || 'BYN'
-                    })
+                    body: JSON.stringify(requestBody)
                 });
 
                 var data = await response.json();
@@ -1213,6 +1308,7 @@
                 testConfig.preAuthAmount = data.amount;
                 testConfig.completedAmount = '';
                 testConfig.refundedAmount = '';
+                testConfig.bindingId = data.bindingId || '';
                 saveToSession();
 
                 var resOrder = document.getElementById('res-order');
