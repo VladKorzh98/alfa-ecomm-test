@@ -442,12 +442,14 @@
 
     <header>
         <div class="logo-container">
-            <svg class="logo-svg" viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
-                <path d="M50 10 L20 95 L33 95 L40 75 L60 75 L67 95 L80 95 Z M45 67 L50 50 L55 67 Z" fill="#EF3124"/>
-                <rect x="20" y="105" width="60" height="6" fill="#EF3124"/>
+            <svg class="logo-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <!-- Буква А -->
+                <path d="M50 20 L20 85 L32 85 L40 62 L60 62 L68 85 L80 85 Z M45 54 L50 38 L55 54 Z" fill="#EF3124"/>
+                <!-- Подчеркивание -->
+                <rect x="20" y="92" width="60" height="5" fill="#EF3124"/>
             </svg>
         </div>
-        <div class="brand-name">API Testing</div>
+        <div class="brand-name">API ECOM Testing</div>
     </header>
 
     <div class="container">
@@ -635,6 +637,10 @@
                         <span class="result-label">Сумма отмены:</span>
                         <span class="result-value" id="st-refunded-amount"></span>
                     </div>
+                    <div class="result-row" id="row-rrn" style="display:none">
+                        <span class="result-label">RRN:</span>
+                        <span class="result-value" id="st-rrn"></span>
+                    </div>
                     <div class="result-row" id="row-client-id" style="display:none">
                         <span class="result-label">Идентификатор клиента:</span>
                         <span class="result-value" id="st-client-id"></span>
@@ -706,7 +712,8 @@
             completedAmount: '',
             refundedAmount: '',
             bindingId: '',
-            selectedCardBindingId: ''
+            selectedCardBindingId: '',
+            rrn: ''
         };
 
         var statusMap = {
@@ -788,6 +795,7 @@
             var savedClientId = sessionStorage.getItem('clientId');
             var savedBindingId = sessionStorage.getItem('bindingId');
             var savedSelectedCardBindingId = sessionStorage.getItem('selectedCardBindingId');
+            var savedRRN = sessionStorage.getItem('rrn');
             
             if (savedOrderId) testConfig.orderId = savedOrderId;
             if (savedOrderNumber) testConfig.orderNumber = savedOrderNumber;
@@ -800,6 +808,7 @@
             if (savedClientId) testConfig.clientId = savedClientId;
             if (savedBindingId) testConfig.bindingId = savedBindingId;
             if (savedSelectedCardBindingId) testConfig.selectedCardBindingId = savedSelectedCardBindingId;
+            if (savedRRN) testConfig.rrn = savedRRN;
             
             console.log('Restored testConfig:', testConfig);
         }
@@ -819,6 +828,7 @@
             }
             if (testConfig.bindingId) sessionStorage.setItem('bindingId', testConfig.bindingId);
             if (testConfig.selectedCardBindingId) sessionStorage.setItem('selectedCardBindingId', testConfig.selectedCardBindingId);
+            if (testConfig.rrn) sessionStorage.setItem('rrn', testConfig.rrn);
         }
 
         function clearSession() {
@@ -827,7 +837,7 @@
                 operationType: '', registrationType: '', stageType: '',
                 amount: '', currency: '', clientId: '', orderId: '', orderNumber: '', 
                 preAuthAmount: '', completedAmount: '', refundedAmount: '', bindingId: '',
-                selectedCardBindingId: ''
+                selectedCardBindingId: '', rrn: ''
             };
         }
 
@@ -932,17 +942,24 @@
                 var data = await response.json();
                 console.log('=== STATUS RESPONSE ===');
                 console.log('bindingId from API:', data.bindingId);
+                console.log('RRN from API:', data.rrn);
                 console.log('======================');
 
                 if (!response.ok || data.error) {
                     throw new Error(data.message || 'Ошибка в ответе API');
                 }
 
-                // Сохраняем bindingId из ответа API
+                // Сохраняем bindingId и RRN из ответа API
                 if (data.bindingId) {
                     testConfig.bindingId = data.bindingId;
                     sessionStorage.setItem('bindingId', data.bindingId);
                     console.log('✅ Saved bindingId from API:', data.bindingId);
+                }
+                
+                if (data.rrn) {
+                    testConfig.rrn = data.rrn;
+                    sessionStorage.setItem('rrn', data.rrn);
+                    console.log('✅ Saved RRN from API:', data.rrn);
                 }
 
                 displayOrderStatus(data);
@@ -1031,6 +1048,20 @@
                 if (amountEl) {
                     var amount = data.amount ? (parseFloat(data.amount) / 100).toFixed(2) : '-';
                     amountEl.innerText = amount + ' ' + currencyName;
+                }
+            }
+            
+            // Показываем RRN если он есть
+            var rowRRN = document.getElementById('row-rrn');
+            var rrnEl = document.getElementById('st-rrn');
+            var rrnValue = testConfig.rrn || data.rrn || '';
+            
+            if (rowRRN && rrnEl) {
+                if (rrnValue) {
+                    rowRRN.style.display = 'flex';
+                    rrnEl.innerText = rrnValue;
+                } else {
+                    rowRRN.style.display = 'none';
                 }
             }
             
