@@ -812,7 +812,9 @@
                 });
 
                 var data = await response.json();
-                console.log('Status response:', data);
+                console.log('=== STATUS RESPONSE ===');
+                console.log('bindingId from API:', data.bindingId);
+                console.log('======================');
 
                 if (!response.ok || data.error) {
                     throw new Error(data.message || 'Ошибка в ответе API');
@@ -822,7 +824,7 @@
                 if (data.bindingId) {
                     testConfig.bindingId = data.bindingId;
                     sessionStorage.setItem('bindingId', data.bindingId);
-                    console.log('Saved bindingId from API:', data.bindingId);
+                    console.log('✅ Saved bindingId from API:', data.bindingId);
                 }
 
                 displayOrderStatus(data);
@@ -920,49 +922,33 @@
             var clientIdEl = document.getElementById('st-client-id');
             var bindingIdEl = document.getElementById('st-binding-id');
             
-            console.log('registrationType:', testConfig.registrationType);
-            console.log('clientId:', testConfig.clientId);
-            console.log('bindingId from config:', testConfig.bindingId);
-            console.log('bindingId from data:', data.bindingId);
-            
             if (testConfig.registrationType === 'with-binding') {
+                // Показываем clientId
                 if (rowClientId) {
                     rowClientId.style.display = 'flex';
-                    console.log('Showing clientId row');
                 }
                 if (clientIdEl) {
                     clientIdEl.innerText = testConfig.clientId || '-';
-                    console.log('Setting clientId:', testConfig.clientId);
                 }
                 
-                // Показываем bindingId если он есть в testConfig или в data
-                var bindingIdValue = testConfig.bindingId || data.bindingId;
-                console.log('Final bindingId value:', bindingIdValue);
+                // Показываем bindingId
+                var bindingIdValue = testConfig.bindingId || data.bindingId || '';
                 
-                if (bindingIdValue) {
-                    if (rowBindingId) {
-                        rowBindingId.style.display = 'flex';
-                        console.log('Showing bindingId row');
-                    }
-                    if (bindingIdEl) {
+                if (rowBindingId) {
+                    rowBindingId.style.display = 'flex';
+                }
+                
+                if (bindingIdEl) {
+                    if (bindingIdValue) {
                         bindingIdEl.innerText = bindingIdValue;
-                        console.log('Setting bindingId:', bindingIdValue);
-                    }
-                } else {
-                    if (rowBindingId) {
-                        rowBindingId.style.display = 'none';
-                        console.log('Hiding bindingId row - no bindingId');
+                    } else {
+                        bindingIdEl.innerText = 'Не получен';
                     }
                 }
             } else {
-                if (rowClientId) {
-                    rowClientId.style.display = 'none';
-                    console.log('Hiding clientId row');
-                }
-                if (rowBindingId) {
-                    rowBindingId.style.display = 'none';
-                    console.log('Hiding bindingId row');
-                }
+                // Скрываем поля для операций без привязки
+                if (rowClientId) rowClientId.style.display = 'none';
+                if (rowBindingId) rowBindingId.style.display = 'none';
             }
             
             if (cardEl) {
