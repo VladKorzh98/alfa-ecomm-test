@@ -724,6 +724,78 @@
     </div>
 
     <script>
+        // ==========================================
+        // ОСНОВНЫЕ ФУНКЦИИ НАВИГАЦИИ
+        // ==========================================
+        
+        function showScreen(screenId) {
+            var screens = document.getElementsByClassName('screen');
+            for (var i = 0; i < screens.length; i++) {
+                screens[i].classList.remove('active');
+            }
+            var targetScreen = document.getElementById(screenId);
+            if (targetScreen) {
+                targetScreen.classList.add('active');
+            }
+            clearErrors();
+            resetProcessScreen();
+        }
+
+        function clearErrors() {
+            var errorElements = document.getElementsByClassName('error-message');
+            for (var i = 0; i < errorElements.length; i++) {
+                errorElements[i].classList.remove('show');
+            }
+        }
+
+        function resetProcessScreen() {
+            var loader = document.getElementById('loader');
+            var status = document.getElementById('status');
+            var backBtn = document.getElementById('backBtn');
+            var payBtn = document.getElementById('payBtn');
+            var resultDetails = document.getElementById('resultDetails');
+            
+            if (loader) loader.style.display = 'none';
+            if (status) {
+                status.innerText = 'Отправка запроса...';
+                status.style.color = '#666';
+            }
+            if (backBtn) backBtn.style.display = 'none';
+            if (payBtn) payBtn.style.display = 'none';
+            if (resultDetails) resultDetails.style.display = 'none';
+        }
+
+        function validateAmount(input) {
+            if (!input) return;
+            input.value = input.value.replace(/[^0-9.]/g, '');
+            var parts = input.value.split('.');
+            if (parts.length > 2) input.value = parts[0] + '.' + parts[1];
+            if (parts.length === 2 && parts[1].length > 2) {
+                input.value = parts[0] + '.' + parts[1].substring(0, 2);
+            }
+        }
+
+        function formatAmount(input) {
+            if (!input) return;
+            var value = input.value.trim();
+            if (value && !value.includes('.')) input.value = value + '.00';
+            else if (value) {
+                var parts = value.split('.');
+                if (parts[1] && parts[1].length === 1) {
+                    input.value = parts[0] + '.' + parts[1] + '0';
+                }
+            }
+        }
+
+        function isValidAmount(amount) {
+            var regex = /^\d+(\.\d{2})?$/;
+            return regex.test(amount) && parseFloat(amount) > 0;
+        }
+
+        // ==========================================
+        // ОСТАЛЬНЫЕ ФУНКЦИИ
+        // ==========================================
+        
         var testConfig = {
             operationType: '',
             registrationType: '',
@@ -1714,6 +1786,25 @@
                 if (backBtn) backBtn.style.display = 'inline-block';
                 showErrorModal(error.message);
             }
+        }
+
+        function showErrorModal(message) {
+            var modal = document.getElementById('errorModal');
+            var errorMsg = document.getElementById('errorMsg');
+            
+            if (!modal || !errorMsg) return;
+            
+            errorMsg.innerText = message;
+            modal.style.display = 'flex';
+            
+            setTimeout(function() {
+                modal.style.display = 'none';
+            }, 7000);
+        }
+
+        function closeErrorModal() {
+            var modal = document.getElementById('errorModal');
+            if (modal) modal.style.display = 'none';
         }
     </script>
 </body>
