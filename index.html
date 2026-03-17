@@ -665,6 +665,15 @@
             loadClientIds();
         }
 
+        // Генерация уникального clientId (12 цифр)
+        function generateClientId() {
+            var clientId = '';
+            for (var i = 0; i < 12; i++) {
+                clientId += Math.floor(Math.random() * 10);
+            }
+            return clientId;
+        }
+
         function restoreFromSession() {
             var savedOrderId = sessionStorage.getItem('orderId');
             var savedOrderNumber = sessionStorage.getItem('orderNumber');
@@ -1255,9 +1264,14 @@
             if (amountInput) amountInput.value = '';
             if (currencySelect) currencySelect.value = 'BYN';
             
-            // Показываем поле clientId только для операций с привязкой
+            // Показываем поле clientId ТОЛЬКО для двухстадийных с привязкой
+            // Для одностадийных с привязкой clientId генерируется автоматически
             if (clientIdGroup) {
-                clientIdGroup.style.display = (testConfig.registrationType === 'with-binding') ? 'block' : 'none';
+                if (testConfig.registrationType === 'with-binding' && stageType === 'two-stage') {
+                    clientIdGroup.style.display = 'block';
+                } else {
+                    clientIdGroup.style.display = 'none';
+                }
             }
             
             showScreen('screen-ecom-input');
@@ -1278,11 +1292,17 @@
                 return;
             }
             
-            // Для операций с привязкой проверяем clientId
-            if (testConfig.registrationType === 'with-binding' && !clientId) {
-                showResultToast('Для операций с привязкой необходимо указать clientId', false);
+            // Для двухстадийных с привязкой проверяем clientId
+            if (testConfig.registrationType === 'with-binding' && testConfig.stageType === 'two-stage' && !clientId) {
+                showResultToast('Для двухстадийных операций с привязкой необходимо указать clientId', false);
                 if (clientIdInput) clientIdInput.focus();
                 return;
+            }
+            
+            // Для одностадийных с привязкой генерируем clientId автоматически
+            if (testConfig.registrationType === 'with-binding' && testConfig.stageType === 'one-stage') {
+                clientId = generateClientId();
+                console.log('Generated clientId:', clientId);
             }
             
             testConfig.amount = amount;
@@ -1323,7 +1343,8 @@
                     currency: testConfig.currency || 'BYN'
                 };
                 
-                if (testConfig.clientId) {
+                // Добавляем clientId только для операций с привязкой
+                if (testConfig.registrationType === 'with-binding' && testConfig.clientId) {
                     requestBody.clientId = testConfig.clientId;
                 }
 
