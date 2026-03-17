@@ -1267,11 +1267,7 @@
             // Показываем поле clientId ТОЛЬКО для двухстадийных с привязкой
             // Для одностадийных с привязкой clientId генерируется автоматически
             if (clientIdGroup) {
-                if (testConfig.registrationType === 'with-binding' && stageType === 'two-stage') {
-                    clientIdGroup.style.display = 'block';
-                } else {
-                    clientIdGroup.style.display = 'none';
-                }
+                clientIdGroup.style.display = 'none';  // Всегда скрываем поле ввода clientId
             }
             
             showScreen('screen-ecom-input');
@@ -1292,15 +1288,8 @@
                 return;
             }
             
-            // Для двухстадийных с привязкой проверяем clientId
-            if (testConfig.registrationType === 'with-binding' && testConfig.stageType === 'two-stage' && !clientId) {
-                showResultToast('Для двухстадийных операций с привязкой необходимо указать clientId', false);
-                if (clientIdInput) clientIdInput.focus();
-                return;
-            }
-            
-            // Для одностадийных с привязкой генерируем clientId автоматически
-            if (testConfig.registrationType === 'with-binding' && testConfig.stageType === 'one-stage') {
+            // Для всех операций с привязкой генерируем clientId автоматически
+            if (testConfig.registrationType === 'with-binding') {
                 clientId = generateClientId();
                 console.log('Generated clientId:', clientId);
             }
