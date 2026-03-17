@@ -818,6 +818,13 @@
                     throw new Error(data.message || 'Ошибка в ответе API');
                 }
 
+                // Сохраняем bindingId из ответа API
+                if (data.bindingId) {
+                    testConfig.bindingId = data.bindingId;
+                    sessionStorage.setItem('bindingId', data.bindingId);
+                    console.log('Saved bindingId from API:', data.bindingId);
+                }
+
                 displayOrderStatus(data);
                 loader.style.display = 'none';
                 text.style.display = 'none';
@@ -913,8 +920,10 @@
             var clientIdEl = document.getElementById('st-client-id');
             var bindingIdEl = document.getElementById('st-binding-id');
             
-            console.log('Showing clientId/bindingId for registrationType:', testConfig.registrationType);
-            console.log('clientId:', testConfig.clientId, 'bindingId:', testConfig.bindingId);
+            console.log('registrationType:', testConfig.registrationType);
+            console.log('clientId:', testConfig.clientId);
+            console.log('bindingId from config:', testConfig.bindingId);
+            console.log('bindingId from data:', data.bindingId);
             
             if (testConfig.registrationType === 'with-binding') {
                 if (rowClientId) {
@@ -926,19 +935,23 @@
                     console.log('Setting clientId:', testConfig.clientId);
                 }
                 
-                if (testConfig.bindingId || data.bindingId) {
+                // Показываем bindingId если он есть в testConfig или в data
+                var bindingIdValue = testConfig.bindingId || data.bindingId;
+                console.log('Final bindingId value:', bindingIdValue);
+                
+                if (bindingIdValue) {
                     if (rowBindingId) {
                         rowBindingId.style.display = 'flex';
                         console.log('Showing bindingId row');
                     }
                     if (bindingIdEl) {
-                        bindingIdEl.innerText = testConfig.bindingId || data.bindingId || '-';
-                        console.log('Setting bindingId:', testConfig.bindingId || data.bindingId);
+                        bindingIdEl.innerText = bindingIdValue;
+                        console.log('Setting bindingId:', bindingIdValue);
                     }
                 } else {
                     if (rowBindingId) {
                         rowBindingId.style.display = 'none';
-                        console.log('Hiding bindingId row');
+                        console.log('Hiding bindingId row - no bindingId');
                     }
                 }
             } else {
