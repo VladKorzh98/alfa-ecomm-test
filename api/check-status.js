@@ -13,8 +13,8 @@ export default async function handler(req, res) {
   const { orderId, orderNumber } = req.body;
 
   console.log('=== CHECK STATUS API START ===');
-  console.log('orderId from request:', orderId);
-  console.log('orderNumber from request:', orderNumber);
+  console.log('orderId:', orderId);
+  console.log('orderNumber:', orderNumber);
 
   if (!orderId) {
     return res.status(400).json({
@@ -51,16 +51,18 @@ export default async function handler(req, res) {
     console.log('Success!');
     console.log('bankData.orderId:', bankData.orderId);
     console.log('bankData.orderStatus:', bankData.orderStatus);
+    console.log('bankData.bindingId:', bankData.bindingId);
 
-    // ВОЗВРАЩАЕМ orderId из ответа банка!
+    // Возвращаем orderId из ответа банка (или используем тот что отправили)
     return res.status(200).json({
-      orderId: bankData.orderId || orderId,  // Если банк не вернул, используем тот что отправили
+      orderId: bankData.orderId || orderId,
       orderNumber: orderNumber,
       orderStatus: bankData.orderStatus,
       amount: bankData.amount,
       currency: bankData.currency,
       authCode: bankData.authCode || null,
       actionCodeDescription: bankData.actionCodeDescription || null,
+      bindingId: bankData.bindingId || null,  // Возвращаем bindingId!
       cardAuthInfo: {
         maskedPan: bankData.cardAuthInfo?.maskedPan || null,
         cardholderName: bankData.cardAuthInfo?.cardholderName || null,
