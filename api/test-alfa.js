@@ -72,7 +72,6 @@ export default async function handler(req, res) {
   
   // Для CIT операций
   if (operation === 'cit') {
-    params.append('mdOrder', 'true'); // Используем существующую привязку
     console.log('CIT operation with clientId:', clientId);
   }
   
@@ -97,14 +96,12 @@ export default async function handler(req, res) {
   try {
     // Определяем endpoint
     let endpoint;
-    if (operation === 'cit') {
-      // Для CIT используем register.do (оплата по существующей привязке)
-      endpoint = 'https://abby.rbsuat.com/payment/rest/register.do';
+    if (stageType === 'two-stage') {
+      // Для двухстадийных используем registerPreAuth.do
+      endpoint = 'https://abby.rbsuat.com/payment/rest/registerPreAuth.do';
     } else {
-      // Для обычных Ecom операций
-      endpoint = stageType === 'two-stage' 
-        ? 'https://abby.rbsuat.com/payment/rest/registerPreAuth.do'
-        : 'https://abby.rbsuat.com/payment/rest/register.do';
+      // Для одностадийных используем register.do
+      endpoint = 'https://abby.rbsuat.com/payment/rest/register.do';
     }
 
     const bankResponse = await fetch(endpoint, {
