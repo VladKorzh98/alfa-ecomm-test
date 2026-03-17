@@ -400,6 +400,42 @@
             background: #ef3124;
             color: white;
         }
+
+        .card-list {
+            text-align: left;
+            margin: 20px 0;
+        }
+
+        .card-item {
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .card-item:hover {
+            border-color: #ef3124;
+            background: #fff5f5;
+        }
+
+        .card-item.selected {
+            border-color: #28a745;
+            background: #d4edda;
+        }
+
+        .card-number {
+            font-family: 'Courier New', monospace;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .card-info {
+            font-size: 12px;
+            color: #666;
+        }
     </style>
 </head>
 <body>
@@ -436,11 +472,20 @@
             <button class="btn" onclick="selectEcomType('no-binding')">Без привязки карты</button>
             <button class="btn btn-secondary" onclick="selectEcomType('with-binding')">С привязкой карты</button>
             <button class="btn btn-warning" onclick="selectOperationType('cit')">Оплата по связке (CIT)</button>
+            <button class="btn btn-secondary" onclick="selectOperationType('mit')">Оплата по связке (MIT)</button>
         </div>
 
         <div id="screen-cit-stage" class="screen">
             <div class="breadcrumb"><span onclick="showScreen('screen-ecom-type')">← Назад</span></div>
             <h1>Оплата по связке (CIT)</h1>
+            <p>Выберите стадийность платежа:</p>
+            <button class="btn" onclick="checkAndProceed('one-stage')">Одностадийный</button>
+            <button class="btn btn-secondary" onclick="checkAndProceed('two-stage')">Двухстадийный</button>
+        </div>
+
+        <div id="screen-mit-stage" class="screen">
+            <div class="breadcrumb"><span onclick="showScreen('screen-ecom-type')">← Назад</span></div>
+            <h1>Оплата по связке (MIT)</h1>
             <p>Выберите стадийность платежа:</p>
             <button class="btn" onclick="checkAndProceed('one-stage')">Одностадийный</button>
             <button class="btn btn-secondary" onclick="checkAndProceed('two-stage')">Двухстадийный</button>
@@ -485,6 +530,14 @@
 
             <button class="btn" onclick="submitPaymentData()">Продолжить</button>
             <button class="btn btn-secondary" onclick="showScreen('screen-ecom-stage')">Назад</button>
+        </div>
+
+        <div id="screen-card-select" class="screen">
+            <div class="breadcrumb"><span onclick="showScreen('screen-ecom-input')">← Назад</span></div>
+            <h1>Выберите карту</h1>
+            <p>Выберите карту для оплаты:</p>
+            <div class="card-list" id="card-list"></div>
+            <div class="error-message" id="card-select-error">Выберите карту</div>
         </div>
 
         <div id="screen-p2p" class="screen">
@@ -652,7 +705,8 @@
             preAuthAmount: '',
             completedAmount: '',
             refundedAmount: '',
-            bindingId: ''
+            bindingId: '',
+            selectedCardBindingId: ''
         };
 
         var statusMap = {
@@ -733,6 +787,7 @@
             var savedRefundedAmount = sessionStorage.getItem('refundedAmount');
             var savedClientId = sessionStorage.getItem('clientId');
             var savedBindingId = sessionStorage.getItem('bindingId');
+            var savedSelectedCardBindingId = sessionStorage.getItem('selectedCardBindingId');
             
             if (savedOrderId) testConfig.orderId = savedOrderId;
             if (savedOrderNumber) testConfig.orderNumber = savedOrderNumber;
@@ -744,6 +799,7 @@
             if (savedRefundedAmount) testConfig.refundedAmount = savedRefundedAmount;
             if (savedClientId) testConfig.clientId = savedClientId;
             if (savedBindingId) testConfig.bindingId = savedBindingId;
+            if (savedSelectedCardBindingId) testConfig.selectedCardBindingId = savedSelectedCardBindingId;
             
             console.log('Restored testConfig:', testConfig);
         }
@@ -762,6 +818,7 @@
                 saveClientId(testConfig.clientId);
             }
             if (testConfig.bindingId) sessionStorage.setItem('bindingId', testConfig.bindingId);
+            if (testConfig.selectedCardBindingId) sessionStorage.setItem('selectedCardBindingId', testConfig.selectedCardBindingId);
         }
 
         function clearSession() {
@@ -769,7 +826,8 @@
             testConfig = {
                 operationType: '', registrationType: '', stageType: '',
                 amount: '', currency: '', clientId: '', orderId: '', orderNumber: '', 
-                preAuthAmount: '', completedAmount: '', refundedAmount: '', bindingId: ''
+                preAuthAmount: '', completedAmount: '', refundedAmount: '', bindingId: '',
+                selectedCardBindingId: ''
             };
         }
 
@@ -976,13 +1034,13 @@
                 }
             }
             
-            // Показываем clientId и bindingId только для операций с привязкой или CIT
+            // Показываем clientId и bindingId только для операций с привязкой или CIT/MIT
             var rowClientId = document.getElementById('row-client-id');
             var rowBindingId = document.getElementById('row-binding-id');
             var clientIdEl = document.getElementById('st-client-id');
             var bindingIdEl = document.getElementById('st-binding-id');
             
-            if (testConfig.registrationType === 'with-binding' || testConfig.operationType === 'cit') {
+            if (testConfig.registrationType === 'with-binding' || testConfig.operationType === 'cit' || testConfig.operationType === 'mit') {
                 // Показываем clientId
                 if (rowClientId) {
                     rowClientId.style.display = 'flex';
@@ -1267,6 +1325,8 @@
             if (refundErrorEl) refundErrorEl.classList.remove('show');
             var clientIdErrorEl = document.getElementById('client-id-error');
             if (clientIdErrorEl) clientIdErrorEl.classList.remove('show');
+            var cardSelectErrorEl = document.getElementById('card-select-error');
+            if (cardSelectErrorEl) cardSelectErrorEl.classList.remove('show');
         }
 
         function validateAmount(input) {
@@ -1300,6 +1360,7 @@
             testConfig.operationType = type;
             if (type === 'ecom') showScreen('screen-ecom-type');
             else if (type === 'cit') showScreen('screen-cit-stage');
+            else if (type === 'mit') showScreen('screen-mit-stage');
             else if (type === 'p2p') showScreen('screen-p2p');
         }
 
@@ -1319,8 +1380,8 @@
             if (amountInput) amountInput.value = '';
             if (currencySelect) currencySelect.value = 'BYN';
             
-            // Для CIT всегда показываем поле clientId с предзаполненным значением
-            if (testConfig.operationType === 'cit') {
+            // Для CIT и MIT всегда показываем поле clientId с предзаполненным значением
+            if (testConfig.operationType === 'cit' || testConfig.operationType === 'mit') {
                 if (clientIdGroup) clientIdGroup.style.display = 'block';
                 if (clientIdInput) {
                     clientIdInput.value = '54321';
@@ -1375,8 +1436,8 @@
                 return;
             }
             
-            // Для CIT проверяем clientId
-            if (testConfig.operationType === 'cit') {
+            // Для CIT и MIT проверяем clientId
+            if (testConfig.operationType === 'cit' || testConfig.operationType === 'mit') {
                 if (!clientId || !/^\d+$/.test(clientId)) {
                     if (clientIdErrorEl) {
                         clientIdErrorEl.innerText = 'clientId должен содержать только цифры';
@@ -1396,7 +1457,253 @@
             testConfig.amount = amount;
             testConfig.currency = currency;
             testConfig.clientId = clientId;
-            runEcomTest();
+            
+            // Для MIT сначала получаем список карт
+            if (testConfig.operationType === 'mit') {
+                getBindingsAndShowCards();
+            } else {
+                runEcomTest();
+            }
+        }
+
+        async function getBindingsAndShowCards() {
+            var loader = document.getElementById('loader');
+            var status = document.getElementById('status');
+            
+            if (loader) loader.style.display = 'block';
+            if (status) {
+                status.innerText = 'Получение списка привязанных карт...';
+                status.style.color = '#666';
+            }
+            
+            try {
+                var response = await fetch('/api/get-bindings', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ 
+                        clientId: testConfig.clientId
+                    })
+                });
+                
+                var data = await response.json();
+                console.log('Bindings response:', data);
+                
+                if (!response.ok || data.error) {
+                    throw new Error(data.message || 'Ошибка при получении списка карт');
+                }
+                
+                // Показываем экран выбора карты
+                showCardSelectionScreen(data.bindings || []);
+                
+                if (loader) loader.style.display = 'none';
+                
+            } catch (error) {
+                console.error('Get bindings error:', error);
+                if (loader) loader.style.display = 'none';
+                showErrorModal(error.message);
+            }
+        }
+
+        function showCardSelectionScreen(bindings) {
+            var cardList = document.getElementById('card-list');
+            if (!cardList) return;
+            
+            cardList.innerHTML = '';
+            
+            if (bindings.length === 0) {
+                cardList.innerHTML = '<p style="color: #ef3124;">Привязанные карты не найдены</p>';
+                showScreen('screen-card-select');
+                return;
+            }
+            
+            bindings.forEach(function(card, index) {
+                var cardDiv = document.createElement('div');
+                cardDiv.className = 'card-item';
+                cardDiv.onclick = function() { selectCard(card.bindingId, card.maskedPan); };
+                cardDiv.innerHTML = '<div class="card-number">' + card.maskedPan + '</div>' +
+                    '<div class="card-info">' + (card.paymentSystem || '') + ' • ' + (card.expiryDate || '') + '</div>';
+                cardList.appendChild(cardDiv);
+            });
+            
+            showScreen('screen-card-select');
+        }
+
+        function selectCard(bindingId, maskedPan) {
+            // Убираем выделение со всех карт
+            var cardItems = document.querySelectorAll('.card-item');
+            cardItems.forEach(function(item) {
+                item.classList.remove('selected');
+            });
+            
+            // Выделяем выбранную карту
+            event.target.closest('.card-item').classList.add('selected');
+            
+            // Сохраняем bindingId выбранной карты
+            testConfig.selectedCardBindingId = bindingId;
+            
+            // Показываем кнопку подтверждения
+            var confirmBtn = document.getElementById('confirm-card-btn');
+            if (!confirmBtn) {
+                confirmBtn = document.createElement('button');
+                confirmBtn.id = 'confirm-card-btn';
+                confirmBtn.className = 'btn';
+                confirmBtn.innerText = 'Продолжить с этой картой';
+                confirmBtn.onclick = function() { proceedWithSelectedCard(); };
+                document.querySelector('#screen-card-select').appendChild(confirmBtn);
+            }
+        }
+
+        async function proceedWithSelectedCard() {
+            if (!testConfig.selectedCardBindingId) {
+                var errorEl = document.getElementById('card-select-error');
+                if (errorEl) {
+                    errorEl.classList.add('show');
+                }
+                return;
+            }
+            
+            // Удаляем кнопку подтверждения
+            var confirmBtn = document.getElementById('confirm-card-btn');
+            if (confirmBtn) {
+                confirmBtn.remove();
+            }
+            
+            // Регистрируем заказ
+            await registerOrderForMIT();
+        }
+
+        async function registerOrderForMIT() {
+            var loader = document.getElementById('loader');
+            var status = document.getElementById('status');
+            
+            if (loader) loader.style.display = 'block';
+            if (status) {
+                status.innerText = 'Регистрация заказа...';
+                status.style.color = '#666';
+            }
+            
+            showScreen('screen-process');
+            
+            try {
+                var requestBody = {
+                    operation: testConfig.operationType || 'ecom',
+                    registrationType: testConfig.registrationType,
+                    stageType: testConfig.stageType,
+                    amount: testConfig.amount || '1.00',
+                    currency: testConfig.currency || 'BYN'
+                };
+                
+                // Добавляем clientId для операций с привязкой или CIT/MIT
+                if ((testConfig.registrationType === 'with-binding' || testConfig.operationType === 'cit' || testConfig.operationType === 'mit') && testConfig.clientId) {
+                    requestBody.clientId = testConfig.clientId;
+                }
+
+                var response = await fetch('/api/test-alfa', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(requestBody)
+                });
+
+                var data = await response.json();
+                console.log('API response:', data);
+
+                if (!response.ok || data.error) {
+                    throw new Error(data.message || 'Ошибка сервера');
+                }
+
+                testConfig.orderId = data.orderId;
+                testConfig.orderNumber = data.orderNumber;
+                testConfig.preAuthAmount = data.amount;
+                testConfig.completedAmount = '';
+                testConfig.refundedAmount = '';
+                testConfig.bindingId = data.bindingId || '';
+                saveToSession();
+
+                // Для MIT выполняем paymentOrderBinding
+                if (testConfig.operationType === 'mit') {
+                    await paymentOrderBinding();
+                } else {
+                    // Для остальных операций показываем результат
+                    var resOrder = document.getElementById('res-order');
+                    var resAmount = document.getElementById('res-amount');
+                    var resCurrency = document.getElementById('res-currency');
+                    
+                    if (resOrder) resOrder.innerText = data.orderNumber;
+                    if (resAmount) resAmount.innerText = data.amount + ' ' + data.currency;
+                    if (resCurrency) resCurrency.innerText = data.currency;
+                    if (document.getElementById('resultDetails')) document.getElementById('resultDetails').style.display = 'block';
+
+                    if (loader) loader.style.display = 'none';
+                    if (status) {
+                        status.innerText = '✓ Заказ зарегистрирован';
+                        status.style.color = 'green';
+                    }
+                    if (document.getElementById('backBtn')) document.getElementById('backBtn').style.display = 'inline-block';
+
+                    if (data.formUrl) {
+                        if (document.getElementById('payBtn')) {
+                            document.getElementById('payBtn').style.display = 'inline-block';
+                            document.getElementById('payBtn').onclick = function() { window.location.href = data.formUrl; };
+                        }
+                    }
+                }
+
+            } catch (error) {
+                console.error('Test error:', error);
+                if (loader) loader.style.display = 'none';
+                if (status) {
+                    status.innerText = '✗ Ошибка: ' + error.message;
+                    status.style.color = 'red';
+                }
+                if (document.getElementById('backBtn')) document.getElementById('backBtn').style.display = 'inline-block';
+                showErrorModal(error.message);
+            }
+        }
+
+        async function paymentOrderBinding() {
+            var loader = document.getElementById('loader');
+            var status = document.getElementById('status');
+            
+            if (loader) loader.style.display = 'block';
+            if (status) {
+                status.innerText = 'Выполнение привязки платежа...';
+                status.style.color = '#666';
+            }
+            
+            try {
+                var response = await fetch('/api/payment-order-binding', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ 
+                        bindingId: testConfig.selectedCardBindingId,
+                        mdOrder: testConfig.orderId,
+                        tii: 'U'
+                    })
+                });
+                
+                var data = await response.json();
+                console.log('Payment order binding response:', data);
+                
+                if (!response.ok || data.error) {
+                    throw new Error(data.message || 'Ошибка при выполнении привязки');
+                }
+                
+                // Редирект на полученный URL
+                if (data.redirect) {
+                    window.location.href = data.redirect;
+                } else {
+                    throw new Error('Не получен URL для редиректа');
+                }
+                
+            } catch (error) {
+                console.error('Payment order binding error:', error);
+                if (loader) loader.style.display = 'none';
+                if (status) {
+                    status.innerText = '✗ Ошибка: ' + error.message;
+                    status.style.color = 'red';
+                }
+                showErrorModal(error.message);
+            }
         }
 
         async function runEcomTest() {
@@ -1409,13 +1716,13 @@
             var payBtn = document.getElementById('payBtn');
             var resultDetails = document.getElementById('resultDetails');
 
-            var operationText = testConfig.operationType === 'cit' ? 'CIT' : 'Ecom';
+            var operationText = testConfig.operationType === 'cit' ? 'CIT' : (testConfig.operationType === 'mit' ? 'MIT' : 'Ecom');
             var regText = testConfig.registrationType === 'with-binding' ? 'С привязкой' : 'Без привязки';
             var stageText = testConfig.stageType === 'one-stage' ? 'Одностадийный' : 'Двухстадийный';
             
             if (title) {
-                if (testConfig.operationType === 'cit') {
-                    title.innerText = 'Оплата по связке / ' + stageText;
+                if (testConfig.operationType === 'cit' || testConfig.operationType === 'mit') {
+                    title.innerText = 'Оплата по связке (' + operationText + ') / ' + stageText;
                 } else {
                     title.innerText = regText + ' / ' + stageText;
                 }
@@ -1439,8 +1746,8 @@
                     currency: testConfig.currency || 'BYN'
                 };
                 
-                // Добавляем clientId для операций с привязкой или CIT
-                if ((testConfig.registrationType === 'with-binding' || testConfig.operationType === 'cit') && testConfig.clientId) {
+                // Добавляем clientId для операций с привязкой или CIT/MIT
+                if ((testConfig.registrationType === 'with-binding' || testConfig.operationType === 'cit' || testConfig.operationType === 'mit') && testConfig.clientId) {
                     requestBody.clientId = testConfig.clientId;
                 }
 
