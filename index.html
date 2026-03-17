@@ -430,9 +430,9 @@
 
             <div class="form-group" id="client-id-group" style="display:none">
                 <label for="client-id">Идентификатор клиента (clientId)</label>
-                <input type="text" id="client-id" placeholder="client_123456" list="client-id-list">
+                <input type="text" id="client-id" placeholder="client_123456" list="client-id-list" autocomplete="off">
                 <datalist id="client-id-list"></datalist>
-                <div class="form-hint">Введите новый или выберите из списка</div>
+                <div class="form-hint">Введите новый или выберите из сохраненных</div>
             </div>
 
             <button class="btn" onclick="submitPaymentData()">Продолжить</button>
@@ -518,7 +518,7 @@
                         <span class="result-label">Номер заказа:</span>
                         <span class="result-value" id="st-order-number"></span>
                     </div>
-                    <div class="result-row">
+                    <div class="result-row" id="row-preauth-amount" style="display:none">
                         <span class="result-label">Сумма преавторизации:</span>
                         <span class="result-value" id="st-preauth-amount"></span>
                     </div>
@@ -856,6 +856,7 @@
             var refundedEl = document.getElementById('st-refunded-amount');
             
             if (testConfig.stageType === 'two-stage') {
+                // Для двухстадийных
                 if (rowPreAuth) rowPreAuth.style.display = 'flex';
                 if (rowAmount) rowAmount.style.display = 'none';
                 
@@ -876,6 +877,7 @@
                     if (rowRefunded) rowRefunded.style.display = 'none';
                 }
             } else {
+                // Для одностадийных
                 if (rowPreAuth) rowPreAuth.style.display = 'none';
                 if (rowAmount) rowAmount.style.display = 'flex';
                 if (rowCompleted) rowCompleted.style.display = 'none';
@@ -887,6 +889,7 @@
                 }
             }
             
+            // Показываем clientId и bindingId только для операций с привязкой
             var rowClientId = document.getElementById('row-client-id');
             var rowBindingId = document.getElementById('row-binding-id');
             var clientIdEl = document.getElementById('st-client-id');
@@ -1204,7 +1207,6 @@
         function checkAndProceed(stageType) {
             testConfig.stageType = stageType;
             
-            // Всегда показываем форму ввода для всех случаев
             var amountInput = document.getElementById('amount');
             var currencySelect = document.getElementById('currency');
             var clientIdGroup = document.getElementById('client-id-group');
