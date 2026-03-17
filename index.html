@@ -430,9 +430,9 @@
 
             <div class="form-group" id="client-id-group" style="display:none">
                 <label for="client-id">Идентификатор клиента (clientId)</label>
-                <input type="text" id="client-id" placeholder="client_123456" list="client-id-list" autocomplete="off">
-                <datalist id="client-id-list"></datalist>
-                <div class="form-hint">Введите новый или выберите из сохраненных</div>
+                <input type="text" id="client-id" placeholder="client_123456" autocomplete="off">
+                <div class="form-hint">Введите идентификатор клиента</div>
+                <div id="saved-client-ids" style="margin-top: 10px;"></div>
             </div>
 
             <button class="btn" onclick="submitPaymentData()">Продолжить</button>
@@ -634,14 +634,24 @@
 
         function loadClientIds() {
             var savedClientIds = JSON.parse(sessionStorage.getItem('clientIds') || '[]');
-            var datalist = document.getElementById('client-id-list');
-            if (datalist) {
-                datalist.innerHTML = '';
+            var container = document.getElementById('saved-client-ids');
+            if (container && savedClientIds.length > 0) {
+                var html = '<div style="font-size: 12px; color: #666; margin-top: 5px;">Сохраненные clientId:</div>';
+                html += '<div style="display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px;">';
                 savedClientIds.forEach(function(id) {
-                    var option = document.createElement('option');
-                    option.value = id;
-                    datalist.appendChild(option);
+                    html += '<button type="button" class="btn-small btn-secondary" onclick="selectClientId(\'' + id + '\')" style="cursor: pointer;">' + id + '</button>';
                 });
+                html += '</div>';
+                container.innerHTML = html;
+            } else if (container) {
+                container.innerHTML = '';
+            }
+        }
+
+        function selectClientId(id) {
+            var input = document.getElementById('client-id');
+            if (input) {
+                input.value = id;
             }
         }
 
@@ -659,6 +669,7 @@
             var savedOrderId = sessionStorage.getItem('orderId');
             var savedOrderNumber = sessionStorage.getItem('orderNumber');
             var savedStageType = sessionStorage.getItem('stageType');
+            var savedRegistrationType = sessionStorage.getItem('registrationType');
             var savedPreAuthAmount = sessionStorage.getItem('preAuthAmount');
             var savedCompletedAmount = sessionStorage.getItem('completedAmount');
             var savedRefundedAmount = sessionStorage.getItem('refundedAmount');
@@ -668,17 +679,21 @@
             if (savedOrderId) testConfig.orderId = savedOrderId;
             if (savedOrderNumber) testConfig.orderNumber = savedOrderNumber;
             if (savedStageType) testConfig.stageType = savedStageType;
+            if (savedRegistrationType) testConfig.registrationType = savedRegistrationType;
             if (savedPreAuthAmount) testConfig.preAuthAmount = savedPreAuthAmount;
             if (savedCompletedAmount) testConfig.completedAmount = savedCompletedAmount;
             if (savedRefundedAmount) testConfig.refundedAmount = savedRefundedAmount;
             if (savedClientId) testConfig.clientId = savedClientId;
             if (savedBindingId) testConfig.bindingId = savedBindingId;
+            
+            console.log('Restored testConfig:', testConfig);
         }
 
         function saveToSession() {
             if (testConfig.orderId) sessionStorage.setItem('orderId', testConfig.orderId);
             if (testConfig.orderNumber) sessionStorage.setItem('orderNumber', testConfig.orderNumber);
             if (testConfig.stageType) sessionStorage.setItem('stageType', testConfig.stageType);
+            if (testConfig.registrationType) sessionStorage.setItem('registrationType', testConfig.registrationType);
             if (testConfig.preAuthAmount) sessionStorage.setItem('preAuthAmount', testConfig.preAuthAmount);
             if (testConfig.completedAmount) sessionStorage.setItem('completedAmount', testConfig.completedAmount);
             if (testConfig.refundedAmount) sessionStorage.setItem('refundedAmount', testConfig.refundedAmount);
@@ -797,6 +812,7 @@
                 });
 
                 var data = await response.json();
+                console.log('Status response:', data);
 
                 if (!response.ok || data.error) {
                     throw new Error(data.message || 'Ошибка в ответе API');
@@ -855,6 +871,8 @@
             var completedEl = document.getElementById('st-completed-amount');
             var refundedEl = document.getElementById('st-refunded-amount');
             
+            console.log('stageType:', testConfig.stageType, 'registrationType:', testConfig.registrationType);
+            
             if (testConfig.stageType === 'two-stage') {
                 // Для двухстадийных
                 if (rowPreAuth) rowPreAuth.style.display = 'flex';
@@ -895,19 +913,43 @@
             var clientIdEl = document.getElementById('st-client-id');
             var bindingIdEl = document.getElementById('st-binding-id');
             
+            console.log('Showing clientId/bindingId for registrationType:', testConfig.registrationType);
+            console.log('clientId:', testConfig.clientId, 'bindingId:', testConfig.bindingId);
+            
             if (testConfig.registrationType === 'with-binding') {
-                if (rowClientId) rowClientId.style.display = 'flex';
-                if (clientIdEl) clientIdEl.innerText = testConfig.clientId || '-';
+                if (rowClientId) {
+                    rowClientId.style.display = 'flex';
+                    console.log('Showing clientId row');
+                }
+                if (clientIdEl) {
+                    clientIdEl.innerText = testConfig.clientId || '-';
+                    console.log('Setting clientId:', testConfig.clientId);
+                }
                 
                 if (testConfig.bindingId || data.bindingId) {
-                    if (rowBindingId) rowBindingId.style.display = 'flex';
-                    if (bindingIdEl) bindingIdEl.innerText = testConfig.bindingId || data.bindingId || '-';
+                    if (rowBindingId) {
+                        rowBindingId.style.display = 'flex';
+                        console.log('Showing bindingId row');
+                    }
+                    if (bindingIdEl) {
+                        bindingIdEl.innerText = testConfig.bindingId || data.bindingId || '-';
+                        console.log('Setting bindingId:', testConfig.bindingId || data.bindingId);
+                    }
                 } else {
-                    if (rowBindingId) rowBindingId.style.display = 'none';
+                    if (rowBindingId) {
+                        rowBindingId.style.display = 'none';
+                        console.log('Hiding bindingId row');
+                    }
                 }
             } else {
-                if (rowClientId) rowClientId.style.display = 'none';
-                if (rowBindingId) rowBindingId.style.display = 'none';
+                if (rowClientId) {
+                    rowClientId.style.display = 'none';
+                    console.log('Hiding clientId row');
+                }
+                if (rowBindingId) {
+                    rowBindingId.style.display = 'none';
+                    console.log('Hiding bindingId row');
+                }
             }
             
             if (cardEl) {
@@ -1293,6 +1335,7 @@
                 });
 
                 var data = await response.json();
+                console.log('API response:', data);
 
                 if (!response.ok || data.error) {
                     throw new Error(data.message || 'Ошибка сервера');
