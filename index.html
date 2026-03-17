@@ -36,6 +36,7 @@
             text-align: center;
         }
 
+        /* Основная кнопка - красный градиент */
         .btn {
             background: linear-gradient(135deg, #ef3124 0%, #d12015 100%);
             color: white;
@@ -60,10 +61,11 @@
             transform: translateY(0);
         }
 
+        /* Вторичная кнопка - белая с красной рамкой */
         .btn-secondary {
-            background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
-            color: white;
-            border: none;
+            background: white;
+            color: #ef3124;
+            border: 2px solid #ef3124;
             padding: 15px 30px;
             font-size: 16px;
             border-radius: 8px;
@@ -71,17 +73,22 @@
             width: 100%;
             margin: 10px 0;
             font-weight: bold;
-            box-shadow: 0 4px 6px rgba(108, 117, 125, 0.3);
+            box-shadow: 0 4px 6px rgba(239, 49, 36, 0.2);
             transition: all 0.2s;
         }
 
         .btn-secondary:hover {
+            background: #ef3124;
+            color: white;
             transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(108, 117, 125, 0.4);
+            box-shadow: 0 6px 12px rgba(239, 49, 36, 0.4);
         }
 
+        /* Кнопка оплаты - зеленая */
         .btn-pay {
             background: linear-gradient(135deg, #28a745 0%, #218838 100%);
+            color: white;
+            border: none;
             box-shadow: 0 4px 6px rgba(40, 167, 69, 0.3);
         }
 
@@ -90,23 +97,25 @@
             box-shadow: 0 6px 12px rgba(40, 167, 69, 0.4);
         }
 
-        .btn-small {
-            padding: 8px 16px;
-            font-size: 14px;
-            width: auto;
-            margin: 5px 0;
-            border-radius: 6px;
-        }
-
+        /* Кнопка предупреждения - желтая */
         .btn-warning {
             background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
             color: #000;
+            border: none;
             box-shadow: 0 4px 6px rgba(255, 193, 7, 0.3);
         }
 
         .btn-warning:hover {
             background: linear-gradient(135deg, #e0a800 0%, #c69500 100%);
             box-shadow: 0 6px 12px rgba(255, 193, 7, 0.4);
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 14px;
+            width: auto;
+            margin: 5px 0;
+            border-radius: 6px;
         }
 
         .screen {
@@ -777,7 +786,6 @@
             loadClientIds();
         }
 
-        // Генерация уникального clientId (12 цифр)
         function generateClientId() {
             var clientId = '';
             for (var i = 0; i < 12; i++) {
@@ -952,7 +960,6 @@
                     throw new Error(data.message || 'Ошибка в ответе API');
                 }
 
-                // Сохраняем bindingId и RRN из ответа API
                 if (data.bindingId) {
                     testConfig.bindingId = data.bindingId;
                     sessionStorage.setItem('bindingId', data.bindingId);
@@ -1021,7 +1028,6 @@
             console.log('stageType:', testConfig.stageType, 'registrationType:', testConfig.registrationType);
             
             if (testConfig.stageType === 'two-stage') {
-                // Для двухстадийных
                 if (rowPreAuth) rowPreAuth.style.display = 'flex';
                 if (rowAmount) rowAmount.style.display = 'none';
                 
@@ -1042,7 +1048,6 @@
                     if (rowRefunded) rowRefunded.style.display = 'none';
                 }
             } else {
-                // Для одностадийных
                 if (rowPreAuth) rowPreAuth.style.display = 'none';
                 if (rowAmount) rowAmount.style.display = 'flex';
                 if (rowCompleted) rowCompleted.style.display = 'none';
@@ -1054,7 +1059,6 @@
                 }
             }
             
-            // Показываем RRN если он есть
             var rowRRN = document.getElementById('row-rrn');
             var rrnEl = document.getElementById('st-rrn');
             var rrnValue = testConfig.rrn || data.rrn || '';
@@ -1068,14 +1072,12 @@
                 }
             }
             
-            // Показываем clientId и bindingId только для операций с привязкой или CIT/MIT
             var rowClientId = document.getElementById('row-client-id');
             var rowBindingId = document.getElementById('row-binding-id');
             var clientIdEl = document.getElementById('st-client-id');
             var bindingIdEl = document.getElementById('st-binding-id');
             
             if (testConfig.registrationType === 'with-binding' || testConfig.operationType === 'cit' || testConfig.operationType === 'mit') {
-                // Показываем clientId
                 if (rowClientId) {
                     rowClientId.style.display = 'flex';
                 }
@@ -1083,7 +1085,6 @@
                     clientIdEl.innerText = testConfig.clientId || '-';
                 }
                 
-                // Показываем bindingId
                 var bindingIdValue = testConfig.bindingId || data.bindingId || '';
                 
                 if (rowBindingId) {
@@ -1098,7 +1099,6 @@
                     }
                 }
             } else {
-                // Скрываем поля для операций без привязки
                 if (rowClientId) rowClientId.style.display = 'none';
                 if (rowBindingId) rowBindingId.style.display = 'none';
             }
@@ -1414,7 +1414,6 @@
             if (amountInput) amountInput.value = '';
             if (currencySelect) currencySelect.value = 'BYN';
             
-            // Для CIT и MIT всегда показываем поле clientId с предзаполненным значением
             if (testConfig.operationType === 'cit' || testConfig.operationType === 'mit') {
                 if (clientIdGroup) clientIdGroup.style.display = 'block';
                 if (clientIdInput) {
@@ -1422,11 +1421,9 @@
                     clientIdInput.readOnly = true;
                 }
             }
-            // Для Ecom с привязкой скрываем поле (генерируется автоматически)
             else if (testConfig.registrationType === 'with-binding') {
                 if (clientIdGroup) clientIdGroup.style.display = 'none';
             }
-            // Для Ecom без привязки скрываем поле
             else {
                 if (clientIdGroup) clientIdGroup.style.display = 'none';
             }
@@ -1470,7 +1467,6 @@
                 return;
             }
             
-            // Для CIT и MIT проверяем clientId
             if (testConfig.operationType === 'cit' || testConfig.operationType === 'mit') {
                 if (!clientId || !/^\d+$/.test(clientId)) {
                     if (clientIdErrorEl) {
@@ -1482,7 +1478,6 @@
                 }
             }
             
-            // Для Ecom с привязкой генерируем clientId автоматически
             if (testConfig.registrationType === 'with-binding') {
                 clientId = generateClientId();
                 console.log('Generated clientId:', clientId);
@@ -1492,7 +1487,6 @@
             testConfig.currency = currency;
             testConfig.clientId = clientId;
             
-            // Для MIT сначала получаем список карт
             if (testConfig.operationType === 'mit') {
                 getBindingsAndShowCards();
             } else {
@@ -1526,7 +1520,6 @@
                     throw new Error(data.message || 'Ошибка при получении списка карт');
                 }
                 
-                // Показываем экран выбора карты
                 showCardSelectionScreen(data.bindings || []);
                 
                 if (loader) loader.style.display = 'none';
@@ -1563,19 +1556,15 @@
         }
 
         function selectCard(bindingId, maskedPan) {
-            // Убираем выделение со всех карт
             var cardItems = document.querySelectorAll('.card-item');
             cardItems.forEach(function(item) {
                 item.classList.remove('selected');
             });
             
-            // Выделяем выбранную карту
             event.target.closest('.card-item').classList.add('selected');
             
-            // Сохраняем bindingId выбранной карты
             testConfig.selectedCardBindingId = bindingId;
             
-            // Показываем кнопку подтверждения
             var confirmBtn = document.getElementById('confirm-card-btn');
             if (!confirmBtn) {
                 confirmBtn = document.createElement('button');
@@ -1596,13 +1585,11 @@
                 return;
             }
             
-            // Удаляем кнопку подтверждения
             var confirmBtn = document.getElementById('confirm-card-btn');
             if (confirmBtn) {
                 confirmBtn.remove();
             }
             
-            // Регистрируем заказ
             await registerOrderForMIT();
         }
 
@@ -1627,7 +1614,6 @@
                     currency: testConfig.currency || 'BYN'
                 };
                 
-                // Добавляем clientId для операций с привязкой или CIT/MIT
                 if ((testConfig.registrationType === 'with-binding' || testConfig.operationType === 'cit' || testConfig.operationType === 'mit') && testConfig.clientId) {
                     requestBody.clientId = testConfig.clientId;
                 }
@@ -1653,11 +1639,9 @@
                 testConfig.bindingId = data.bindingId || '';
                 saveToSession();
 
-                // Для MIT выполняем paymentOrderBinding
                 if (testConfig.operationType === 'mit') {
                     await paymentOrderBinding();
                 } else {
-                    // Для остальных операций показываем результат
                     var resOrder = document.getElementById('res-order');
                     var resAmount = document.getElementById('res-amount');
                     var resCurrency = document.getElementById('res-currency');
@@ -1722,7 +1706,6 @@
                     throw new Error(data.message || 'Ошибка при выполнении привязки');
                 }
                 
-                // Редирект на полученный URL
                 if (data.redirect) {
                     window.location.href = data.redirect;
                 } else {
@@ -1780,7 +1763,6 @@
                     currency: testConfig.currency || 'BYN'
                 };
                 
-                // Добавляем clientId для операций с привязкой или CIT/MIT
                 if ((testConfig.registrationType === 'with-binding' || testConfig.operationType === 'cit' || testConfig.operationType === 'mit') && testConfig.clientId) {
                     requestBody.clientId = testConfig.clientId;
                 }
