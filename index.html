@@ -741,7 +741,8 @@
             rrn: '',
             refundOrderId: '',
             refundTotalAmount: '',
-            refundAvailableAmount: ''
+            refundAvailableAmount: '',
+            refundCurrency: ''
         };
 
         var statusMap = {
@@ -826,6 +827,7 @@
             var savedRefundOrderId = sessionStorage.getItem('refundOrderId');
             var savedRefundTotalAmount = sessionStorage.getItem('refundTotalAmount');
             var savedRefundAvailableAmount = sessionStorage.getItem('refundAvailableAmount');
+            var savedRefundCurrency = sessionStorage.getItem('refundCurrency');
             
             if (savedOrderId) testConfig.orderId = savedOrderId;
             if (savedOrderNumber) testConfig.orderNumber = savedOrderNumber;
@@ -842,6 +844,7 @@
             if (savedRefundOrderId) testConfig.refundOrderId = savedRefundOrderId;
             if (savedRefundTotalAmount) testConfig.refundTotalAmount = savedRefundTotalAmount;
             if (savedRefundAvailableAmount) testConfig.refundAvailableAmount = savedRefundAvailableAmount;
+            if (savedRefundCurrency) testConfig.refundCurrency = savedRefundCurrency;
             
             console.log('Restored testConfig:', testConfig);
         }
@@ -865,6 +868,7 @@
             if (testConfig.refundOrderId) sessionStorage.setItem('refundOrderId', testConfig.refundOrderId);
             if (testConfig.refundTotalAmount) sessionStorage.setItem('refundTotalAmount', testConfig.refundTotalAmount);
             if (testConfig.refundAvailableAmount) sessionStorage.setItem('refundAvailableAmount', testConfig.refundAvailableAmount);
+            if (testConfig.refundCurrency) sessionStorage.setItem('refundCurrency', testConfig.refundCurrency);
         }
 
         function clearSession() {
@@ -874,7 +878,7 @@
                 amount: '', currency: '', clientId: '', orderId: '', orderNumber: '', 
                 preAuthAmount: '', completedAmount: '', refundedAmount: '', bindingId: '',
                 selectedCardBindingId: '', rrn: '', refundOrderId: '',
-                refundTotalAmount: '', refundAvailableAmount: ''
+                refundTotalAmount: '', refundAvailableAmount: '', refundCurrency: ''
             };
         }
 
@@ -1231,7 +1235,8 @@
             }
             
             try {
-                var response = await fetch('/api/refund-order', {
+                // Используем новый API для возвратов (refund.do)
+                var response = await fetch('/api/return-order', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ 
@@ -1277,9 +1282,6 @@
                 }
             }
         }
-
-        // ... остальные функции остаются без изменений ...
-        // (все функции из предыдущего файла сохраняются)
 
         function selectOperationType(type) {
             testConfig.operationType = type;
