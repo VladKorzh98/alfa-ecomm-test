@@ -90,6 +90,15 @@
             margin: 5px 0;
         }
 
+        .btn-warning {
+            background-color: #ffc107;
+            color: #000;
+        }
+
+        .btn-warning:hover {
+            background-color: #e0a800;
+        }
+
         .screen {
             display: none;
         }
@@ -178,10 +187,23 @@
             border-color: #ef3124;
         }
 
+        .form-group input[readonly] {
+            background-color: #f5f5f5;
+            cursor: not-allowed;
+        }
+
         .form-hint {
             font-size: 12px;
             color: #999;
             margin-top: 5px;
+        }
+
+        .form-hint.warning {
+            color: #856404;
+            background: #fff3cd;
+            padding: 8px;
+            border-radius: 4px;
+            margin-top: 8px;
         }
 
         .error-message {
@@ -362,6 +384,22 @@
             font-weight: bold;
             margin-bottom: 5px;
         }
+
+        .edit-btn {
+            background: none;
+            border: 1px solid #ef3124;
+            color: #ef3124;
+            padding: 4px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-top: 8px;
+        }
+
+        .edit-btn:hover {
+            background: #ef3124;
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -388,6 +426,7 @@
             <div class="breadcrumb"><span onclick="showScreen('screen-welcome')">← На главную</span></div>
             <h1>Выберите тип операций</h1>
             <button class="btn" onclick="selectOperationType('ecom')">Ecom-операции</button>
+            <button class="btn btn-warning" onclick="selectOperationType('cit')">Оплата по связке (CIT)</button>
             <button class="btn btn-secondary" onclick="selectOperationType('p2p')">P2P-операции</button>
         </div>
 
@@ -397,6 +436,14 @@
             <p>Выберите тип регистрации заказа:</p>
             <button class="btn" onclick="selectEcomType('no-binding')">Без привязки карты</button>
             <button class="btn btn-secondary" onclick="selectEcomType('with-binding')">С привязкой карты</button>
+        </div>
+
+        <div id="screen-cit-stage" class="screen">
+            <div class="breadcrumb"><span onclick="showScreen('screen-select')">← Назад</span></div>
+            <h1>Оплата по связке (CIT)</h1>
+            <p>Выберите стадийность платежа:</p>
+            <button class="btn" onclick="checkAndProceed('one-stage')">Одностадийный</button>
+            <button class="btn btn-secondary" onclick="checkAndProceed('two-stage')">Двухстадийный</button>
         </div>
 
         <div id="screen-ecom-stage" class="screen">
@@ -430,9 +477,10 @@
 
             <div class="form-group" id="client-id-group" style="display:none">
                 <label for="client-id">Идентификатор клиента (clientId)</label>
-                <input type="text" id="client-id" placeholder="client_123456" autocomplete="off">
-                <div class="form-hint">Введите идентификатор клиента</div>
-                <div id="saved-client-ids" style="margin-top: 10px;"></div>
+                <input type="text" id="client-id" placeholder="54321" value="54321" readonly>
+                <button type="button" class="edit-btn" onclick="enableClientIdEdit()">✏️ Изменить clientId</button>
+                <div class="form-hint warning">⚠️ Значение 54321 уже имеет список сохраненных карт. Менять его только по необходимости</div>
+                <div class="error-message" id="client-id-error">Некорректный clientId</div>
             </div>
 
             <button class="btn" onclick="submitPaymentData()">Продолжить</button>
@@ -679,6 +727,7 @@
             var savedOrderNumber = sessionStorage.getItem('orderNumber');
             var savedStageType = sessionStorage.getItem('stageType');
             var savedRegistrationType = sessionStorage.getItem('registrationType');
+            var savedOperationType = sessionStorage.getItem('operationType');
             var savedPreAuthAmount = sessionStorage.getItem('preAuthAmount');
             var savedCompletedAmount = sessionStorage.getItem('completedAmount');
             var savedRefundedAmount = sessionStorage.getItem('refundedAmount');
@@ -689,6 +738,7 @@
             if (savedOrderNumber) testConfig.orderNumber = savedOrderNumber;
             if (savedStageType) testConfig.stageType = savedStageType;
             if (savedRegistrationType) testConfig.registrationType = savedRegistrationType;
+            if (savedOperationType) testConfig.operationType = savedOperationType;
             if (savedPreAuthAmount) testConfig.preAuthAmount = savedPreAuthAmount;
             if (savedCompletedAmount) testConfig.completedAmount = savedCompletedAmount;
             if (savedRefundedAmount) testConfig.refundedAmount = savedRefundedAmount;
@@ -703,6 +753,7 @@
             if (testConfig.orderNumber) sessionStorage.setItem('orderNumber', testConfig.orderNumber);
             if (testConfig.stageType) sessionStorage.setItem('stageType', testConfig.stageType);
             if (testConfig.registrationType) sessionStorage.setItem('registrationType', testConfig.registrationType);
+            if (testConfig.operationType) sessionStorage.setItem('operationType', testConfig.operationType);
             if (testConfig.preAuthAmount) sessionStorage.setItem('preAuthAmount', testConfig.preAuthAmount);
             if (testConfig.completedAmount) sessionStorage.setItem('completedAmount', testConfig.completedAmount);
             if (testConfig.refundedAmount) sessionStorage.setItem('refundedAmount', testConfig.refundedAmount);
@@ -925,13 +976,13 @@
                 }
             }
             
-            // Показываем clientId и bindingId только для операций с привязкой
+            // Показываем clientId и bindingId только для операций с привязкой или CIT
             var rowClientId = document.getElementById('row-client-id');
             var rowBindingId = document.getElementById('row-binding-id');
             var clientIdEl = document.getElementById('st-client-id');
             var bindingIdEl = document.getElementById('st-binding-id');
             
-            if (testConfig.registrationType === 'with-binding') {
+            if (testConfig.registrationType === 'with-binding' || testConfig.operationType === 'cit') {
                 // Показываем clientId
                 if (rowClientId) {
                     rowClientId.style.display = 'flex';
@@ -1214,6 +1265,8 @@
             if (completeErrorEl) completeErrorEl.classList.remove('show');
             var refundErrorEl = document.getElementById('refund-amount-error');
             if (refundErrorEl) refundErrorEl.classList.remove('show');
+            var clientIdErrorEl = document.getElementById('client-id-error');
+            if (clientIdErrorEl) clientIdErrorEl.classList.remove('show');
         }
 
         function validateAmount(input) {
@@ -1246,6 +1299,7 @@
         function selectOperationType(type) {
             testConfig.operationType = type;
             if (type === 'ecom') showScreen('screen-ecom-type');
+            else if (type === 'cit') showScreen('screen-cit-stage');
             else if (type === 'p2p') showScreen('screen-p2p');
         }
 
@@ -1260,17 +1314,49 @@
             var amountInput = document.getElementById('amount');
             var currencySelect = document.getElementById('currency');
             var clientIdGroup = document.getElementById('client-id-group');
+            var clientIdInput = document.getElementById('client-id');
             
             if (amountInput) amountInput.value = '';
             if (currencySelect) currencySelect.value = 'BYN';
             
-            // Показываем поле clientId ТОЛЬКО для двухстадийных с привязкой
-            // Для одностадийных с привязкой clientId генерируется автоматически
-            if (clientIdGroup) {
-                clientIdGroup.style.display = 'none';  // Всегда скрываем поле ввода clientId
+            // Для CIT всегда показываем поле clientId с предзаполненным значением
+            if (testConfig.operationType === 'cit') {
+                if (clientIdGroup) clientIdGroup.style.display = 'block';
+                if (clientIdInput) {
+                    clientIdInput.value = '54321';
+                    clientIdInput.readOnly = true;
+                }
+            }
+            // Для Ecom с привязкой скрываем поле (генерируется автоматически)
+            else if (testConfig.registrationType === 'with-binding') {
+                if (clientIdGroup) clientIdGroup.style.display = 'none';
+            }
+            // Для Ecom без привязки скрываем поле
+            else {
+                if (clientIdGroup) clientIdGroup.style.display = 'none';
             }
             
             showScreen('screen-ecom-input');
+        }
+
+        function enableClientIdEdit() {
+            var clientIdInput = document.getElementById('client-id');
+            var editBtn = document.querySelector('.edit-btn');
+            
+            if (clientIdInput && editBtn) {
+                if (clientIdInput.readOnly) {
+                    clientIdInput.readOnly = false;
+                    clientIdInput.focus();
+                    editBtn.innerText = '✓ Сохранить';
+                    editBtn.style.background = '#28a745';
+                    editBtn.style.color = 'white';
+                } else {
+                    clientIdInput.readOnly = true;
+                    editBtn.innerText = '✏️ Изменить clientId';
+                    editBtn.style.background = 'none';
+                    editBtn.style.color = '#ef3124';
+                }
+            }
         }
 
         function submitPaymentData() {
@@ -1278,6 +1364,7 @@
             var currencySelect = document.getElementById('currency');
             var clientIdInput = document.getElementById('client-id');
             var errorEl = document.getElementById('amount-error');
+            var clientIdErrorEl = document.getElementById('client-id-error');
             var amount = amountInput ? amountInput.value.trim() : '';
             var currency = currencySelect ? currencySelect.value : 'BYN';
             var clientId = clientIdInput ? clientIdInput.value.trim() : '';
@@ -1288,7 +1375,19 @@
                 return;
             }
             
-            // Для всех операций с привязкой генерируем clientId автоматически
+            // Для CIT проверяем clientId
+            if (testConfig.operationType === 'cit') {
+                if (!clientId || !/^\d+$/.test(clientId)) {
+                    if (clientIdErrorEl) {
+                        clientIdErrorEl.innerText = 'clientId должен содержать только цифры';
+                        clientIdErrorEl.classList.add('show');
+                    }
+                    if (clientIdInput) clientIdInput.focus();
+                    return;
+                }
+            }
+            
+            // Для Ecom с привязкой генерируем clientId автоматически
             if (testConfig.registrationType === 'with-binding') {
                 clientId = generateClientId();
                 console.log('Generated clientId:', clientId);
@@ -1310,9 +1409,17 @@
             var payBtn = document.getElementById('payBtn');
             var resultDetails = document.getElementById('resultDetails');
 
+            var operationText = testConfig.operationType === 'cit' ? 'CIT' : 'Ecom';
             var regText = testConfig.registrationType === 'with-binding' ? 'С привязкой' : 'Без привязки';
             var stageText = testConfig.stageType === 'one-stage' ? 'Одностадийный' : 'Двухстадийный';
-            if (title) title.innerText = regText + ' / ' + stageText;
+            
+            if (title) {
+                if (testConfig.operationType === 'cit') {
+                    title.innerText = 'Оплата по связке / ' + stageText;
+                } else {
+                    title.innerText = regText + ' / ' + stageText;
+                }
+            }
 
             if (status) {
                 status.innerText = 'Отправка запроса в Альфа-Банк...';
@@ -1325,15 +1432,15 @@
 
             try {
                 var requestBody = {
-                    operation: 'ecom',
+                    operation: testConfig.operationType || 'ecom',
                     registrationType: testConfig.registrationType,
                     stageType: testConfig.stageType,
                     amount: testConfig.amount || '1.00',
                     currency: testConfig.currency || 'BYN'
                 };
                 
-                // Добавляем clientId только для операций с привязкой
-                if (testConfig.registrationType === 'with-binding' && testConfig.clientId) {
+                // Добавляем clientId для операций с привязкой или CIT
+                if ((testConfig.registrationType === 'with-binding' || testConfig.operationType === 'cit') && testConfig.clientId) {
                     requestBody.clientId = testConfig.clientId;
                 }
 
