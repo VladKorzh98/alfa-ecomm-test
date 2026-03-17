@@ -51,9 +51,13 @@ export default async function handler(req, res) {
     console.log('Success!');
     console.log('bankData.orderId:', bankData.orderId);
     console.log('bankData.orderStatus:', bankData.orderStatus);
-    console.log('bankData.bindingId:', bankData.bindingId);
+    console.log('bankData.bindingInfo:', bankData.bindingInfo);
+    
+    // Извлекаем bindingId из bindingInfo.bindingId
+    const bindingId = bankData.bindingInfo?.bindingId || null;
+    console.log('Extracted bindingId:', bindingId);
 
-    // Возвращаем orderId из ответа банка (или используем тот что отправили)
+    // Возвращаем данные с bindingId
     return res.status(200).json({
       orderId: bankData.orderId || orderId,
       orderNumber: orderNumber,
@@ -62,7 +66,7 @@ export default async function handler(req, res) {
       currency: bankData.currency,
       authCode: bankData.authCode || null,
       actionCodeDescription: bankData.actionCodeDescription || null,
-      bindingId: bankData.bindingId || null,  // Возвращаем bindingId!
+      bindingId: bindingId,
       cardAuthInfo: {
         maskedPan: bankData.cardAuthInfo?.maskedPan || null,
         cardholderName: bankData.cardAuthInfo?.cardholderName || null,
