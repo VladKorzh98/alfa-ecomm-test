@@ -36,7 +36,6 @@
             text-align: center;
         }
 
-        /* Основной стиль кнопок - белый с красной рамкой */
         .btn {
             background: white;
             color: #ef3124;
@@ -645,6 +644,15 @@
                             <div id="st-error-description"></div>
                         </div>
                     </div>
+                    
+                    <!-- ВОССТАНОВЛЕННАЯ СЕКЦИЯ КНОПОК ДЕЙСТВИЙ -->
+                    <div class="action-buttons" id="action-buttons" style="display:none">
+                        <div class="action-buttons-title">Действия с заказом:</div>
+                        <div class="button-group">
+                            <button class="btn btn-small" onclick="showCompleteAmountScreen()">✓ Завершить</button>
+                            <button class="btn btn-small" onclick="showRefundAmountScreen()">✗ Отменить</button>
+                        </div>
+                    </div>
                 </div>
 
                 <button class="btn" onclick="clearSessionAndGoHome()">Новый платеж</button>
@@ -1167,6 +1175,56 @@
             } else {
                 if (errorDescBlock) errorDescBlock.style.display = 'none';
             }
+            
+            // ВОССТАНОВЛЕННАЯ ЛОГИКА ОТОБРАЖЕНИЯ КНОПОК ДЕЙСТВИЙ
+            var actionButtons = document.getElementById('action-buttons');
+            if (testConfig.stageType === 'two-stage' && (status === '1' || status === '8')) {
+                var preAuth = parseFloat(testConfig.preAuthAmount) || 0;
+                var refunded = parseFloat(testConfig.refundedAmount) || 0;
+                var completed = parseFloat(testConfig.completedAmount) || 0;
+                var available = preAuth - refunded - completed;
+                
+                if (available > 0 && actionButtons) {
+                    actionButtons.style.display = 'block';
+                } else if (actionButtons) {
+                    actionButtons.style.display = 'none';
+                }
+            } else {
+                if (actionButtons) actionButtons.style.display = 'none';
+            }
+        }
+
+        function showCompleteAmountScreen() {
+            var preAuth = parseFloat(testConfig.preAuthAmount) || 0;
+            var refunded = parseFloat(testConfig.refundedAmount) || 0;
+            var available = Math.max(0, preAuth - refunded);
+            
+            var availableEl = document.getElementById('available-amount');
+            var amountInput = document.getElementById('complete-amount');
+            var errorEl = document.getElementById('complete-amount-error');
+            
+            if (availableEl) availableEl.innerText = available.toFixed(2) + ' ' + (currencyMap[testConfig.currency] || testConfig.currency);
+            if (amountInput) amountInput.value = available.toFixed(2);
+            if (errorEl) errorEl.classList.remove('show');
+            
+            showScreen('screen-complete-amount');
+        }
+
+        function showRefundAmountScreen() {
+            var preAuth = parseFloat(testConfig.preAuthAmount) || 0;
+            var refunded = parseFloat(testConfig.refundedAmount) || 0;
+            var completed = parseFloat(testConfig.completedAmount) || 0;
+            var available = Math.max(0, preAuth - refunded - completed);
+            
+            var availableEl = document.getElementById('available-refund');
+            var amountInput = document.getElementById('refund-amount');
+            var errorEl = document.getElementById('refund-amount-error');
+            
+            if (availableEl) availableEl.innerText = available.toFixed(2) + ' ' + (currencyMap[testConfig.currency] || testConfig.currency);
+            if (amountInput) amountInput.value = '';
+            if (errorEl) errorEl.classList.remove('show');
+            
+            showScreen('screen-refund-amount');
         }
 
         async function checkRefundOrder() {
@@ -1200,17 +1258,14 @@
                     throw new Error(data.message || 'Ошибка при проверке заказа');
                 }
                 
-                // Проверяем статус заказа (должен быть 2 - завершен)
                 if (data.orderStatus !== 2 && data.orderStatus !== '2') {
                     throw new Error('Заказ находится в некорректном статусе');
                 }
                 
-                // Сохраняем информацию о заказе для возврата
                 testConfig.refundTotalAmount = data.amount ? (parseFloat(data.amount) / 100).toFixed(2) : '0.00';
                 testConfig.refundAvailableAmount = testConfig.refundTotalAmount;
                 testConfig.refundCurrency = data.currency || '933';
                 
-                // Отображаем экран ввода суммы возврата
                 var availableEl = document.getElementById('available-refund-amount');
                 var currencyName = currencyMap[testConfig.refundCurrency] || testConfig.refundCurrency;
                 if (availableEl) {
@@ -1252,7 +1307,6 @@
             }
             
             try {
-                // Используем новый API для возвратов (refund.do)
                 var response = await fetch('/api/return-order', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
@@ -1268,11 +1322,9 @@
                     throw new Error(data.message || 'Ошибка при выполнении возврата');
                 }
                 
-                // Обновляем сумму возврата
                 var currentRefund = parseFloat(testConfig.refundedAmount) || 0;
                 testConfig.refundedAmount = (currentRefund + parseFloat(amount)).toFixed(2);
                 
-                // Обновляем доступную сумму для возврата
                 var total = parseFloat(testConfig.refundTotalAmount) || 0;
                 var refunded = parseFloat(testConfig.refundedAmount) || 0;
                 testConfig.refundAvailableAmount = Math.max(0, total - refunded).toFixed(2);
@@ -1286,7 +1338,6 @@
                     submitBtn.innerText = originalBtnText;
                 }
                 
-                // Переход на страницу статуса заказа
                 showScreen('screen-status');
                 await checkOrderStatus(testConfig.refundOrderId);
                 
