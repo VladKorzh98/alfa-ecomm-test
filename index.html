@@ -578,6 +578,22 @@
             <button class="btn" onclick="showScreen('screen-status')">Отмена</button>
         </div>
 
+        <div id="screen-refund-two-stage" class="screen">
+            <div class="breadcrumb"><span onclick="showScreen('screen-status')">← Назад</span></div>
+            <h1>Отмена части заказа</h1>
+            <p>Введите сумму для отмены:</p>
+            
+            <div class="form-group">
+                <label for="refund-two-stage-amount">Сумма отмены</label>
+                <input type="text" id="refund-two-stage-amount" placeholder="0.00" oninput="validateAmount(this)" onblur="formatAmount(this)">
+                <div class="form-hint">Доступно для отмены: <span id="available-refund-two-stage"></span></div>
+                <div class="error-message" id="refund-two-stage-amount-error">Некорректная сумма</div>
+            </div>
+
+            <button class="btn" id="refund-two-stage-submit-btn" onclick="submitRefundTwoStage()">Отменить сумму</button>
+            <button class="btn" onclick="showScreen('screen-status')">Назад</button>
+        </div>
+
         <div id="screen-status" class="screen">
             <div class="breadcrumb"><span onclick="showScreen('screen-welcome')">← На главную</span></div>
             <h1>Статус платежа</h1>
@@ -610,8 +626,12 @@
                         <span class="result-label">Сумма заказа:</span>
                         <span class="result-value" id="st-amount"></span>
                     </div>
+                    <div class="result-row" id="row-completed-amount" style="display:none">
+                        <span class="result-label">Сумма завершения:</span>
+                        <span class="result-value" id="st-completed-amount"></span>
+                    </div>
                     <div class="result-row" id="row-refunded-amount" style="display:none">
-                        <span class="result-label">Сумма возврата:</span>
+                        <span class="result-label">Сумма отмен:</span>
                         <span class="result-value" id="st-refunded-amount"></span>
                     </div>
                     <div class="result-row" id="row-rrn" style="display:none">
@@ -645,12 +665,11 @@
                         </div>
                     </div>
                     
-                    <!-- ВОССТАНОВЛЕННАЯ СЕКЦИЯ КНОПОК ДЕЙСТВИЙ -->
                     <div class="action-buttons" id="action-buttons" style="display:none">
                         <div class="action-buttons-title">Действия с заказом:</div>
                         <div class="button-group">
                             <button class="btn btn-small" onclick="showCompleteAmountScreen()">✓ Завершить</button>
-                            <button class="btn btn-small" onclick="showRefundAmountScreen()">✗ Отменить</button>
+                            <button class="btn btn-small" onclick="showRefundTwoStageScreen()">✗ Отменить</button>
                         </div>
                     </div>
                 </div>
@@ -1073,37 +1092,47 @@
             
             var rowPreAuth = document.getElementById('row-preauth-amount');
             var rowAmount = document.getElementById('row-amount');
+            var rowCompleted = document.getElementById('row-completed-amount');
             var rowRefunded = document.getElementById('row-refunded-amount');
             var preAuthEl = document.getElementById('st-preauth-amount');
             var amountEl = document.getElementById('st-amount');
+            var completedEl = document.getElementById('st-completed-amount');
             var refundedEl = document.getElementById('st-refunded-amount');
             
             console.log('stageType:', testConfig.stageType, 'registrationType:', testConfig.registrationType);
             
             if (testConfig.stageType === 'two-stage') {
+                // Для двухстадийных
                 if (rowPreAuth) rowPreAuth.style.display = 'flex';
                 if (rowAmount) rowAmount.style.display = 'none';
+                if (rowCompleted) rowCompleted.style.display = 'flex';
+                if (rowRefunded) rowRefunded.style.display = 'flex';
                 
                 var preAuthAmount = testConfig.preAuthAmount || (data.amount ? (parseFloat(data.amount) / 100).toFixed(2) : '-');
                 if (preAuthEl) preAuthEl.innerText = preAuthAmount + ' ' + currencyName;
                 
+                if (testConfig.completedAmount) {
+                    if (completedEl) completedEl.innerText = testConfig.completedAmount + ' ' + currencyName;
+                } else {
+                    if (completedEl) completedEl.innerText = '0.00 ' + currencyName;
+                }
+                
+                if (testConfig.refundedAmount && parseFloat(testConfig.refundedAmount) > 0) {
+                    if (refundedEl) refundedEl.innerText = testConfig.refundedAmount + ' ' + currencyName;
+                } else {
+                    if (refundedEl) refundedEl.innerText = '0.00 ' + currencyName;
+                }
             } else {
+                // Для одностадийных
                 if (rowPreAuth) rowPreAuth.style.display = 'none';
                 if (rowAmount) rowAmount.style.display = 'flex';
+                if (rowCompleted) rowCompleted.style.display = 'none';
+                if (rowRefunded) rowRefunded.style.display = 'none';
                 
                 if (amountEl) {
                     var amount = data.amount ? (parseFloat(data.amount) / 100).toFixed(2) : '-';
                     amountEl.innerText = amount + ' ' + currencyName;
                 }
-            }
-            
-            // Отображение суммы возврата
-            if (rowRefunded) {
-                rowRefunded.style.display = 'flex';
-            }
-            if (refundedEl) {
-                var refundedAmount = testConfig.refundedAmount || '0.00';
-                refundedEl.innerText = refundedAmount + ' ' + currencyName;
             }
             
             var rowRRN = document.getElementById('row-rrn');
@@ -1176,7 +1205,7 @@
                 if (errorDescBlock) errorDescBlock.style.display = 'none';
             }
             
-            // ВОССТАНОВЛЕННАЯ ЛОГИКА ОТОБРАЖЕНИЯ КНОПОК ДЕЙСТВИЙ
+            // Логика отображения кнопок действий
             var actionButtons = document.getElementById('action-buttons');
             if (testConfig.stageType === 'two-stage' && (status === '1' || status === '8')) {
                 var preAuth = parseFloat(testConfig.preAuthAmount) || 0;
@@ -1210,21 +1239,21 @@
             showScreen('screen-complete-amount');
         }
 
-        function showRefundAmountScreen() {
+        function showRefundTwoStageScreen() {
             var preAuth = parseFloat(testConfig.preAuthAmount) || 0;
             var refunded = parseFloat(testConfig.refundedAmount) || 0;
             var completed = parseFloat(testConfig.completedAmount) || 0;
             var available = Math.max(0, preAuth - refunded - completed);
             
-            var availableEl = document.getElementById('available-refund');
-            var amountInput = document.getElementById('refund-amount');
-            var errorEl = document.getElementById('refund-amount-error');
+            var availableEl = document.getElementById('available-refund-two-stage');
+            var amountInput = document.getElementById('refund-two-stage-amount');
+            var errorEl = document.getElementById('refund-two-stage-amount-error');
             
             if (availableEl) availableEl.innerText = available.toFixed(2) + ' ' + (currencyMap[testConfig.currency] || testConfig.currency);
             if (amountInput) amountInput.value = '';
             if (errorEl) errorEl.classList.remove('show');
             
-            showScreen('screen-refund-amount');
+            showScreen('screen-refund-two-stage');
         }
 
         async function checkRefundOrder() {
@@ -1344,6 +1373,69 @@
             } catch (error) {
                 console.error('Refund error:', error);
                 showResultToast(error.message || 'Не удалось выполнить возврат', false);
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = originalBtnText;
+                }
+            }
+        }
+
+        async function submitRefundTwoStage() {
+            var amountInput = document.getElementById('refund-two-stage-amount');
+            var errorEl = document.getElementById('refund-two-stage-amount-error');
+            var submitBtn = document.getElementById('refund-two-stage-submit-btn');
+            var amount = amountInput ? amountInput.value.trim() : '';
+            
+            if (!amount || !isValidAmount(amount)) {
+                if (errorEl) errorEl.classList.add('show');
+                if (amountInput) amountInput.focus();
+                return;
+            }
+            
+            if (!testConfig.orderId) {
+                showResultToast('Ошибка: нет orderId', false);
+                return;
+            }
+            
+            var originalBtnText = submitBtn ? submitBtn.innerText : 'Отменить сумму';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = 'Обработка...';
+            }
+            
+            try {
+                var response = await fetch('/api/refund-order', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ 
+                        orderId: testConfig.orderId,
+                        amount: amount
+                    })
+                });
+                
+                var data = await response.json();
+                
+                if (!response.ok || data.error) {
+                    throw new Error(data.message || 'Ошибка при отмене');
+                }
+                
+                var currentRefund = parseFloat(testConfig.refundedAmount) || 0;
+                testConfig.refundedAmount = (currentRefund + parseFloat(amount)).toFixed(2);
+                saveToSession();
+                
+                showResultToast('Отмена на сумму ' + amount + ' выполнена успешно!', true);
+                
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = originalBtnText;
+                }
+                
+                showScreen('screen-status');
+                await checkOrderStatus(testConfig.orderId);
+                
+            } catch (error) {
+                console.error('Refund two-stage error:', error);
+                showResultToast(error.message || 'Не удалось отменить сумму', false);
                 if (submitBtn) {
                     submitBtn.disabled = false;
                     submitBtn.innerText = originalBtnText;
