@@ -1014,10 +1014,6 @@
             text.innerText = 'Получение статуса заказа...';
             result.style.display = 'none';
 
-            // СБРАСЫВАЕМ значения сумм для текущего заказа
-            testConfig.completedAmount = '';
-            testConfig.refundedAmount = '';
-
             try {
                 var response = await fetch('/api/check-status', {
                     method: 'POST',
@@ -1487,8 +1483,14 @@
                     throw new Error(data.message || 'Ошибка при отмене');
                 }
                 
+                // Обновляем сумму отмен
                 var currentRefund = parseFloat(testConfig.refundedAmount) || 0;
                 testConfig.refundedAmount = (currentRefund + parseFloat(amount)).toFixed(2);
+                
+                // Сохраняем в sessionStorage
+                sessionStorage.setItem('refundedAmount', testConfig.refundedAmount);
+                sessionStorage.setItem('orderId', testConfig.orderId);
+                
                 saveToSession();
                 
                 showResultToast('Отмена на сумму ' + amount + ' выполнена успешно!', true);
@@ -1498,8 +1500,13 @@
                     submitBtn.innerText = originalBtnText;
                 }
                 
+                // Перезагружаем страницу статуса с обновленными данными
                 showScreen('screen-status');
-                await checkOrderStatus(testConfig.orderId);
+                
+                // Небольшая задержка чтобы дать sessionStorage сохраниться
+                setTimeout(function() {
+                    checkOrderStatus(testConfig.orderId);
+                }, 500);
                 
             } catch (error) {
                 console.error('Refund two-stage error:', error);
