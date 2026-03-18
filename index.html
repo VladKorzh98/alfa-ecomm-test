@@ -1014,6 +1014,10 @@
             text.innerText = 'Получение статуса заказа...';
             result.style.display = 'none';
 
+            // СБРАСЫВАЕМ значения сумм для текущего заказа
+            testConfig.completedAmount = '';
+            testConfig.refundedAmount = '';
+
             try {
                 var response = await fetch('/api/check-status', {
                     method: 'POST',
@@ -1111,12 +1115,14 @@
                 var preAuthAmount = testConfig.preAuthAmount || (data.amount ? (parseFloat(data.amount) / 100).toFixed(2) : '-');
                 if (preAuthEl) preAuthEl.innerText = preAuthAmount + ' ' + currencyName;
                 
-                if (testConfig.completedAmount) {
+                // Показываем сумму завершения только если она есть
+                if (testConfig.completedAmount && parseFloat(testConfig.completedAmount) > 0) {
                     if (completedEl) completedEl.innerText = testConfig.completedAmount + ' ' + currencyName;
                 } else {
                     if (completedEl) completedEl.innerText = '0.00 ' + currencyName;
                 }
                 
+                // Показываем сумму отмен только если она есть
                 if (testConfig.refundedAmount && parseFloat(testConfig.refundedAmount) > 0) {
                     if (refundedEl) refundedEl.innerText = testConfig.refundedAmount + ' ' + currencyName;
                 } else {
