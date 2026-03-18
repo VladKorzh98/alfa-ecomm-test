@@ -1239,6 +1239,68 @@
             showScreen('screen-complete-amount');
         }
 
+        async function submitCompleteAmount() {
+            var amountInput = document.getElementById('complete-amount');
+            var errorEl = document.getElementById('complete-amount-error');
+            var submitBtn = document.getElementById('complete-submit-btn');
+            var amount = amountInput ? amountInput.value.trim() : '';
+            
+            if (!amount || !isValidAmount(amount)) {
+                if (errorEl) errorEl.classList.add('show');
+                if (amountInput) amountInput.focus();
+                return;
+            }
+            
+            if (!testConfig.orderId) {
+                showResultToast('Ошибка: нет orderId', false);
+                return;
+            }
+            
+            var originalBtnText = submitBtn ? submitBtn.innerText : 'Завершить заказ';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = 'Обработка...';
+            }
+            
+            try {
+                var response = await fetch('/api/complete-order', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ 
+                        orderId: testConfig.orderId,
+                        amount: amount
+                    })
+                });
+                
+                var data = await response.json();
+                
+                if (!response.ok || data.error) {
+                    throw new Error(data.message || 'Ошибка при завершении заказа');
+                }
+                
+                testConfig.completedAmount = amount;
+                saveToSession();
+                
+                showResultToast('Заказ завершен на сумму ' + amount + ' успешно!', true);
+                
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = originalBtnText;
+                }
+                
+                showScreen('screen-status');
+                await checkOrderStatus(testConfig.orderId);
+                
+            } catch (error) {
+                console.error('Complete error:', error);
+                showResultToast(error.message || 'Не удалось завершить заказ', false);
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = originalBtnText;
+                }
+            }
+        }
+
         function showRefundTwoStageScreen() {
             var preAuth = parseFloat(testConfig.preAuthAmount) || 0;
             var refunded = parseFloat(testConfig.refundedAmount) || 0;
