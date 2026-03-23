@@ -5,18 +5,25 @@ export default async function handler(req, res) {
 
   const { amount, currency, orderNumber, clientId } = req.body;
 
-  const amountMinor = Math.round(parseFloat(amount) * 100);
+  console.log('=== P2P REGISTER ===');
+  console.log('amount:', amount);
+  console.log('currency:', currency);
+  console.log('orderNumber:', orderNumber);
+  console.log('clientId:', clientId);
 
-  // Получаем базовый URL из переменной окружения или используем дефолтный
-  const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+  const amountMinor = Math.round(parseFloat(amount) * 100);
   
+  // Используем относительный путь для returnUrl
+  const baseUrl = process.env.BASE_URL || '';
+  const returnUrl = baseUrl + '/api/p2p/return';
+
   const requestBody = {
     username: process.env.ALFA_USERNAME || 'ABB_3-api',
     password: process.env.ALFA_PASSWORD || 'ABB_3*?1',
     amount: amountMinor,
     currency: currency || '933',
     orderNumber: orderNumber,
-    returnUrl: baseUrl + '/p2p/status.html',  // ИЗМЕНЕНО: указываем нашу страницу статуса
+    returnUrl: returnUrl,
     clientId: clientId,
     features: {
       feature: ['FORCE_SSL']
@@ -31,6 +38,7 @@ export default async function handler(req, res) {
     });
 
     const data = await response.json();
+    console.log('P2P Register response:', data);
 
     if (data.errorCode !== 0 || data.error) {
       throw new Error(data.errorMessage || 'Ошибка регистрации');
@@ -43,6 +51,7 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
+    console.error('P2P Register error:', error);
     return res.status(500).json({ error: error.message });
   }
 }
