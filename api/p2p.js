@@ -1,10 +1,12 @@
 export default async function handler(req, res) {
   const { action } = req.query;
 
+  // GET запросы (не используются)
   if (req.method === 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // POST запросы
   if (req.method === 'POST') {
     const { action } = req.body;
     
@@ -200,12 +202,15 @@ async function handleStatus(req, res) {
     }
 
     return res.status(200).json({
-      status: data.status,
+      orderId: data.orderId || orderId,
+      status: data.orderStatus,
       amount: data.amount,
       currency: data.currency,
       rrn: data.rrn,
-      fromCard: data.fromCard,
-      toCard: data.toCard
+      panMaskedFrom: data.panMaskedFrom,
+      panMaskedTo: data.panMaskedTo,
+      operationList: data.operationList || [],
+      creationDate: data.creationDate
     });
 
   } catch (error) {
