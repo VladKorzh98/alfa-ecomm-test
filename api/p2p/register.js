@@ -7,13 +7,16 @@ export default async function handler(req, res) {
 
   const amountMinor = Math.round(parseFloat(amount) * 100);
 
+  // Получаем базовый URL из переменной окружения или используем дефолтный
+  const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+  
   const requestBody = {
     username: process.env.ALFA_USERNAME || 'ABB_3-api',
     password: process.env.ALFA_PASSWORD || 'ABB_3*?1',
     amount: amountMinor,
     currency: currency || '933',
     orderNumber: orderNumber,
-    returnUrl: process.env.BASE_URL || 'test.by',
+    returnUrl: baseUrl + '/p2p/status.html',  // ИЗМЕНЕНО: указываем нашу страницу статуса
     clientId: clientId,
     features: {
       feature: ['FORCE_SSL']
