@@ -210,7 +210,8 @@ async function handleStatus(req, res) {
       panMaskedFrom: data.panMaskedFrom,
       panMaskedTo: data.panMaskedTo,
       operationList: data.operationList || [],
-      creationDate: data.creationDate
+      creationDate: data.creationDate,
+      errorMessage: data.errorMessage || ''  // <-- Добавлено описание ошибки
     });
 
   } catch (error) {
