@@ -153,6 +153,25 @@
             color: white;
             border-color: #28a745;
         }
+
+        .error-description {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .error-description-title {
+            font-weight: bold;
+            color: #856404;
+            margin-bottom: 8px;
+        }
+
+        .error-description-text {
+            color: #856404;
+        }
     </style>
 </head>
 <body>
@@ -203,6 +222,14 @@
                 <div class="result-row">
                     <span class="result-label">Карта получателя:</span>
                     <span class="result-value" id="st-to-card"></span>
+                </div>
+            </div>
+
+            <!-- Блок описания ошибки -->
+            <div id="error-description-block" style="display:none">
+                <div class="error-description">
+                    <div class="error-description-title">Описание ошибки:</div>
+                    <div class="error-description-text" id="st-error-description"></div>
                 </div>
             </div>
 
@@ -290,6 +317,18 @@
                 // Карты
                 document.getElementById('st-from-card').innerText = data.panMaskedFrom || '-';
                 document.getElementById('st-to-card').innerText = data.panMaskedTo || '-';
+
+                // Показываем описание ошибки если есть
+                var errorDescBlock = document.getElementById('error-description-block');
+                var errorDescEl = document.getElementById('st-error-description');
+                
+                // Показываем если статус ошибки (6 - отклонен) или есть errorMessage
+                if ((data.status === '6' || data.status === 6) && data.errorMessage && data.errorMessage !== 'Успешно') {
+                    if (errorDescBlock) errorDescBlock.style.display = 'block';
+                    if (errorDescEl) errorDescEl.innerText = data.errorMessage;
+                } else {
+                    if (errorDescBlock) errorDescBlock.style.display = 'none';
+                }
 
                 document.getElementById('status-content').style.display = 'block';
 
