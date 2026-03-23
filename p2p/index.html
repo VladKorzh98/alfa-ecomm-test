@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>P2P операции - Альфа-Банк API</title>
     <style>
-        /* Стили копируем из index.html или делаем общие */
         body {
             font-family: Arial, sans-serif;
             margin: 0;
@@ -54,6 +53,16 @@
         .btn:hover {
             background: #ef3124;
             color: white;
+            transform: translateY(-2px);
+        }
+
+        .btn-primary {
+            background: #ef3124;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #d12015;
         }
 
         .form-group {
@@ -68,13 +77,19 @@
             color: #333;
         }
 
-        .form-group input {
+        .form-group input,
+        .form-group select {
             width: 100%;
             padding: 12px;
             border: 2px solid #ddd;
             border-radius: 5px;
             font-size: 16px;
             box-sizing: border-box;
+        }
+
+        .form-group input[readonly] {
+            background-color: #f5f5f5;
+            cursor: not-allowed;
         }
 
         .breadcrumb {
@@ -90,6 +105,133 @@
         .breadcrumb span:hover {
             color: #ef3124;
         }
+
+        .card-list {
+            text-align: left;
+            margin: 20px 0;
+        }
+
+        .card-item {
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .card-item:hover {
+            border-color: #ef3124;
+            background: #fff5f5;
+        }
+
+        .card-item.selected {
+            border-color: #28a745;
+            background: #d4edda;
+        }
+
+        .card-number {
+            font-family: 'Courier New', monospace;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .card-info {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .card-label {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .card-label.from {
+            background: #ffc107;
+            color: #000;
+        }
+
+        .card-label.to {
+            background: #28a745;
+            color: white;
+        }
+
+        .selection-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .selection-info h3 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #ef3124;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .screen {
+            display: none;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        .error-message {
+            color: #ef3124;
+            font-size: 14px;
+            margin-top: 5px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .result-box {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .result-row {
+            margin: 10px 0;
+            padding: 8px 0;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .result-label {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .result-value {
+            color: #666;
+        }
     </style>
 </head>
 <body>
@@ -102,34 +244,111 @@
             <span onclick="window.location.href='../index.html'">← На главную</span>
         </div>
 
-        <h1>P2P операции</h1>
-        <p>Переводы между картами</p>
-
-        <div class="form-group">
-            <label for="cardFrom">Карта отправителя</label>
-            <input type="text" id="cardFrom" placeholder="0000000000000000">
+        <!-- Screen 1: Main P2P Menu -->
+        <div id="screen-p2p-main" class="screen active">
+            <h1>P2P операции</h1>
+            <p>Переводы между картами</p>
+            <button class="btn" onclick="showScreen('screen-p2p-type')">P2P (связка→связка)</button>
         </div>
 
-        <div class="form-group">
-            <label for="cardTo">Карта получателя</label>
-            <input type="text" id="cardTo" placeholder="0000000000000000">
+        <!-- Screen 2: Choose 3DS or No 3DS -->
+        <div id="screen-p2p-type" class="screen">
+            <div class="breadcrumb">
+                <span onclick="showScreen('screen-p2p-main')">← Назад</span>
+            </div>
+            <h1>Тип P2P перевода</h1>
+            <p>Выберите тип аутентификации:</p>
+            <button class="btn" onclick="selectP2PType('with-3ds')">С 3DS</button>
+            <button class="btn" onclick="selectP2PType('without-3ds')">Без 3DS</button>
         </div>
 
-        <div class="form-group">
-            <label for="amount">Сумма</label>
-            <input type="text" id="amount" placeholder="0.00">
+        <!-- Screen 3: Select Cards (for No 3DS) -->
+        <div id="screen-select-cards" class="screen">
+            <div class="breadcrumb">
+                <span onclick="showScreen('screen-p2p-type')">← Назад</span>
+            </div>
+            <h1>Выберите карты</h1>
+            <p>Выберите карту списания и карту получателя:</p>
+            
+            <div id="cards-loader" class="loader" style="display:none"></div>
+            <div id="cards-error" class="error-message"></div>
+            
+            <div class="card-list" id="card-list"></div>
+            
+            <div class="selection-info">
+                <h3>Выбранные карты:</h3>
+                <div><strong>Карта списания:</strong> <span id="selected-from">Не выбрана</span></div>
+                <div><strong>Карта получателя:</strong> <span id="selected-to">Не выбрана</span></div>
+            </div>
+
+            <button class="btn btn-primary" id="continue-btn" onclick="showAmountScreen()" disabled>Продолжить</button>
+            <button class="btn" onclick="showScreen('screen-p2p-type')">Отмена</button>
         </div>
 
-        <div class="form-group">
-            <label for="currency">Валюта</label>
-            <select id="currency" style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 5px;">
-                <option value="BYN">BYN</option>
-                <option value="USD">USD</option>
-                <option value="EUR">EUR</option>
-            </select>
+        <!-- Screen 4: Enter Amount -->
+        <div id="screen-amount" class="screen">
+            <div class="breadcrumb">
+                <span onclick="showScreen('screen-select-cards')">← Назад</span>
+            </div>
+            <h1>Сумма перевода</h1>
+            
+            <div class="form-group">
+                <label for="p2p-amount">Сумма</label>
+                <input type="text" id="p2p-amount" placeholder="0.00" oninput="validateAmount(this)">
+            </div>
+
+            <div class="form-group">
+                <label for="p2p-currency">Валюта</label>
+                <select id="p2p-currency" disabled>
+                    <option value="933">BYN - Белорусский рубль</option>
+                </select>
+            </div>
+
+            <button class="btn btn-primary" onclick="registerP2P()">Зарегистрировать перевод</button>
+            <button class="btn" onclick="showScreen('screen-select-cards')">Отмена</button>
         </div>
 
-        <button class="btn" onclick="registerP2P()">Зарегистрировать перевод</button>
+        <!-- Screen 5: Processing -->
+        <div id="screen-processing" class="screen">
+            <h1>Обработка перевода</h1>
+            <div class="loader"></div>
+            <p id="processing-status">Регистрация перевода...</p>
+        </div>
+
+        <!-- Screen 6: Status -->
+        <div id="screen-status" class="screen">
+            <div class="breadcrumb">
+                <span onclick="window.location.href='../index.html'">← На главную</span>
+            </div>
+            <h1>Статус P2P перевода</h1>
+            
+            <div id="status-loader" class="loader"></div>
+            <div id="status-content" style="display:none">
+                <div class="result-box">
+                    <div class="result-row">
+                        <span class="result-label">Статус:</span>
+                        <span class="result-value" id="st-status"></span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">Сумма:</span>
+                        <span class="result-value" id="st-amount"></span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">RRN:</span>
+                        <span class="result-value" id="st-rrn"></span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">Карта списания:</span>
+                        <span class="result-value" id="st-from-card"></span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">Карта получателя:</span>
+                        <span class="result-value" id="st-to-card"></span>
+                    </div>
+                </div>
+                <button class="btn" onclick="window.location.href='../index.html'">На главную</button>
+            </div>
+        </div>
     </div>
 
     <script src="p2p-flow.js"></script>
