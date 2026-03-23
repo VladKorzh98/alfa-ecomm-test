@@ -10,7 +10,6 @@ var p2pConfig = {
     orderNumber: ''
 };
 
-// ДОБАВЛЕНА ФУНКЦИЯ
 function showScreen(screenId) {
     var screens = document.getElementsByClassName('screen');
     for (var i = 0; i < screens.length; i++) {
@@ -112,7 +111,7 @@ function selectCard(index) {
         cardItems[index].classList.add('selected');
         var label = document.createElement('span');
         label.className = 'card-label from';
-        label.innerText = '← Списания';
+        label.innerText = 'Списание';
         cardItems[index].appendChild(label);
     }
     // If no card selected as 'to', select as 'to'
@@ -121,7 +120,7 @@ function selectCard(index) {
         cardItems[index].classList.add('selected');
         var label = document.createElement('span');
         label.className = 'card-label to';
-        label.innerText = '→ Получателя';
+        label.innerText = 'Получение';
         cardItems[index].appendChild(label);
     }
     
