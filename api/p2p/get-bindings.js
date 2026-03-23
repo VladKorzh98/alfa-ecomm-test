@@ -14,7 +14,7 @@ export default async function handler(req, res) {
   params.append('clientId', clientId);
 
   try {
-    const response = await fetch('https://abby.rbsuat.com/payment/rest/getOrderStatusExtended.do', {
+    const response = await fetch('https://abby.rbsuat.com/payment/rest/getBindings.do', {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/x-www-form-urlencoded' 
@@ -28,24 +28,21 @@ export default async function handler(req, res) {
     console.log('Bank response:', data);
 
     if (data.errorCode && data.errorCode !== '0' && data.errorCode !== 0) {
-      // Если заказ не найден, это нормально - возвращаем пустой список
-      if (data.errorCode === '5') {
-        return res.status(200).json({ 
-          bindings: [],
-          message: 'Карты не найдены'
-        });
-      }
       throw new Error(data.errorMessage || 'Ошибка от банка');
     }
 
-    // Извлекаем bindingInfo из ответа
-    const bindings = data.bindingInfo?.bindings || [];
+    // Извлекаем bindings из ответа
+    const bindings = data.bindings || [];
     
-    console.log('Found bindings:', bindings);
+    console.log('✅ Found bindings:', bindings.length);
+    bindings.forEach((binding, idx) => {
+      console.log(`  Card ${idx + 1}:`, binding.maskedPan, '- BindingId:', binding.bindingId);
+    });
 
     return res.status(200).json({ 
       bindings: bindings,
-      count: bindings.length
+      count: bindings.length,
+      message: bindings.length > 0 ? 'Карты найдены' : 'Привязанные карты не найдены для clientId ' + clientId
     });
 
   } catch (error) {
