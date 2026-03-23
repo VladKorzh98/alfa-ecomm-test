@@ -25,8 +25,8 @@ function selectP2PType(type) {
     p2pConfig.type = type;
     if (type === 'without-3ds') {
         loadCards();
-    } else {
-        alert('P2P с 3DS будет реализован позже');
+    } else if (type === 'with-3ds') {
+        loadCards();
     }
 }
 
@@ -190,7 +190,8 @@ async function registerP2P() {
                 amount: amount,
                 currency: p2pConfig.currency,
                 orderNumber: p2pConfig.orderNumber,
-                clientId: '54321'
+                clientId: '54321',
+                use3DS: (p2pConfig.type === 'with-3ds')
             })
         });
         
@@ -222,8 +223,12 @@ async function registerP2P() {
             throw new Error(performData.message || 'Ошибка выполнения');
         }
         
-        // Redirect to finish page
-        if (performData.redirect) {
+        // Проверяем есть ли 3DS редирект
+        if (performData.acsRedirect) {
+            // Открываем 3DS страницу
+            show3DSPage(performData.acsRedirect);
+        } else if (performData.redirect) {
+            // Обычный редирект (без 3DS)
             window.location.href = performData.redirect;
         } else {
             showStatusPage();
@@ -236,11 +241,30 @@ async function registerP2P() {
     }
 }
 
-function generateOrderNumber() {
-    return Math.floor(Math.random() * 100000).toString();
+function show3DSPage(acsRedirect) {
+    showScreen('screen-3ds');
+    
+    // Устанавливаем src iframe
+    var iframe = document.getElementById('3ds-frame');
+    if (iframe) {
+        iframe.src = acsRedirect;
+    }
+    
+    // Сохраняем orderId для проверки после 3DS
+    sessionStorage.setItem('p2p_orderId', p2pConfig.orderId);
+    
+    // Проверяем завершение через 10 секунд
+    setTimeout(check3DSComplete, 10000);
 }
 
-async function showStatusPage() {
+function check3DSComplete() {
+    var orderId = sessionStorage.getItem('p2p_orderId');
+    if (orderId) {
+        showStatusPage();
+    }
+}
+
+function showStatusPage() {
     showScreen('screen-status');
     var loader = document.getElementById('status-loader');
     var content = document.getElementById('status-content');
@@ -248,34 +272,143 @@ async function showStatusPage() {
     loader.style.display = 'block';
     content.style.display = 'none';
     
+    var orderId = sessionStorage.getItem('p2p_orderId') || p2pConfig.orderId;
+    
+    loadStatus(orderId);
+}
+
+async function loadStatus(orderId) {
     try {
         var response = await fetch('/api/p2p?action=status', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
                 action: 'status',
-                orderId: p2pConfig.orderId
+                orderId: orderId
             })
         });
-        
+
         var data = await response.json();
-        
+
+        document.getElementById('status-loader').style.display = 'none';
+
         if (!response.ok || data.error) {
             throw new Error(data.message || 'Ошибка получения статуса');
         }
+
+        // Отображаем orderId с кнопкой копирования
+        document.getElementById('st-order-id').innerText = data.orderId || '-';
         
-        document.getElementById('st-status').innerText = data.status || 'Неизвестно';
-        document.getElementById('st-amount').innerText = (parseFloat(data.amount) / 100).toFixed(2) + ' BYN';
-        document.getElementById('st-rrn').innerText = data.rrn || '-';
-        document.getElementById('st-from-card').innerText = p2pConfig.fromCard ? p2pConfig.fromCard.maskedPan : '-';
-        document.getElementById('st-to-card').innerText = p2pConfig.toCard ? p2pConfig.toCard.maskedPan : '-';
+        // Статус
+        var statusEl = document.getElementById('st-status');
+        var statusText = getStatusText(data.status);
+        statusEl.innerText = statusText;
         
-        loader.style.display = 'none';
-        content.style.display = 'block';
+        if (data.status === '0' || data.status === 0) {
+            statusEl.className = 'result-value status-error';
+        } else if (data.status === '2' || data.status === 2) {
+            statusEl.className = 'result-value status-success';
+        } else if (data.status === '6' || data.status === 6) {
+            statusEl.className = 'result-value status-error';
+        } else {
+            statusEl.className = 'result-value';
+        }
+
+        // Сумма (делим на 100 если нужно)
+        var amount = data.amount || 0;
+        if (amount > 100) {
+            amount = amount / 100;
+        }
+        document.getElementById('st-amount').innerText = amount.toFixed(2);
         
+        // Валюта
+        var currency = data.currency || '933';
+        document.getElementById('st-currency').innerText = currency === '933' ? 'BYN' : currency;
+        
+        // RRN (из operationList)
+        var rrn = '-';
+        if (data.operationList && data.operationList.length > 0) {
+            var firstOp = data.operationList[0];
+            if (firstOp.refNum) {
+                rrn = firstOp.refNum;
+            }
+        }
+        document.getElementById('st-rrn').innerText = rrn;
+        
+        // Карты
+        document.getElementById('st-from-card').innerText = data.panMaskedFrom || '-';
+        document.getElementById('st-to-card').innerText = data.panMaskedTo || '-';
+
+        // Показываем описание ошибки если есть
+        var errorDescBlock = document.getElementById('error-description-block');
+        var errorDescEl = document.getElementById('st-error-description');
+        
+        if ((data.status === '6' || data.status === 6) && data.errorMessage && data.errorMessage !== 'Успешно') {
+            if (errorDescBlock) errorDescBlock.style.display = 'block';
+            if (errorDescEl) errorDescEl.innerText = data.errorMessage;
+        } else {
+            if (errorDescBlock) errorDescBlock.style.display = 'none';
+        }
+
+        document.getElementById('status-content').style.display = 'block';
+
     } catch (error) {
         console.error('Status error:', error);
-        loader.style.display = 'none';
-        alert('Ошибка получения статуса: ' + error.message);
+        document.getElementById('status-loader').style.display = 'none';
+        document.getElementById('error').innerText = 'Ошибка: ' + error.message;
+        document.getElementById('error').style.display = 'block';
     }
+}
+
+function getStatusText(statusCode) {
+    var statusMap = {
+        '0': 'Заказ зарегистрирован, не оплачен',
+        '1': 'Заказ подтвержден',
+        '2': 'Заказ завершен',
+        '3': 'Отменен',
+        '4': 'Возврат',
+        '5': '3DS проверка',
+        '6': 'Отклонен',
+        '7': 'Ожидает оплаты',
+        '8': 'Частичное завершение'
+    };
+    return statusMap[statusCode] || 'Неизвестный статус (' + statusCode + ')';
+}
+
+function generateOrderNumber() {
+    return Math.floor(Math.random() * 100000).toString();
+}
+
+function copyOrderId() {
+    var orderId = document.getElementById('st-order-id').innerText;
+    if (!orderId || orderId === '-') {
+        alert('Нет orderId для копирования');
+        return;
+    }
+    
+    navigator.clipboard.writeText(orderId).then(function() {
+        var btn = event.target;
+        var originalText = btn.innerText;
+        btn.innerText = 'Скопировано!';
+        btn.classList.add('copied');
+        setTimeout(function() {
+            btn.innerText = originalText;
+            btn.classList.remove('copied');
+        }, 2000);
+    }).catch(function(err) {
+        var textArea = document.createElement('textarea');
+        textArea.value = orderId;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        
+        var btn = event.target;
+        btn.innerText = 'Скопировано!';
+        btn.classList.add('copied');
+        setTimeout(function() {
+            btn.innerText = 'Копировать';
+            btn.classList.remove('copied');
+        }, 2000);
+    });
 }
