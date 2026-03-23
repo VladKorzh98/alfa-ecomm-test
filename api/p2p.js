@@ -81,8 +81,10 @@ async function handleRegister(req, res) {
 
   const amountMinor = Math.round(parseFloat(amount) * 100);
   
-  // ИСПОЛЬЗУЕМ ОТНОСИТЕЛЬНЫЙ ПУТЬ (как в ECOM)
-  const returnUrl = '/p2p/status.html';
+  // ИСПОЛЬЗУЕМ ТАКОЙ ЖЕ ПОДХОД КАК В ECOM:
+  const host = req.headers.host || process.env.VERCEL_URL || 'localhost';
+  const protocol = process.env.VERCEL_ENV === 'production' ? 'https' : 'http';
+  const returnUrl = `${protocol}://${host}/p2p/status.html`;  // Полный URL!
   
   console.log('Return URL:', returnUrl);
 
@@ -92,7 +94,7 @@ async function handleRegister(req, res) {
     amount: amountMinor,
     currency: currency || '933',
     orderNumber: orderNumber,
-    returnUrl: returnUrl,  // Относительный путь - банк сам подставит домен
+    returnUrl: returnUrl,  // Полный URL с доменом
     clientId: clientId,
     features: {
       feature: ['FORCE_SSL']
