@@ -23,6 +23,7 @@ function showScreen(screenId) {
 
 function selectP2PType(type) {
     p2pConfig.type = type;
+    console.log('📌 Selected P2P type:', type);
     if (type === 'without-3ds') {
         loadCards();
     } else if (type === 'with-3ds') {
@@ -94,21 +95,18 @@ function selectCard(index) {
     var cardItems = document.querySelectorAll('.card-item');
     var card = p2pConfig.cards[index];
     
-    // If card already selected as 'from', remove it
     if (p2pConfig.fromCard && p2pConfig.fromCard.bindingId === card.bindingId) {
         p2pConfig.fromCard = null;
         cardItems[index].classList.remove('selected');
         var label = cardItems[index].querySelector('.card-label.from');
         if (label) label.remove();
     }
-    // If card already selected as 'to', remove it
     else if (p2pConfig.toCard && p2pConfig.toCard.bindingId === card.bindingId) {
         p2pConfig.toCard = null;
         cardItems[index].classList.remove('selected');
         var label = cardItems[index].querySelector('.card-label.to');
         if (label) label.remove();
     }
-    // If no card selected as 'from', select as 'from'
     else if (!p2pConfig.fromCard) {
         p2pConfig.fromCard = card;
         cardItems[index].classList.add('selected');
@@ -117,7 +115,6 @@ function selectCard(index) {
         label.innerText = 'Списание';
         cardItems[index].appendChild(label);
     }
-    // If no card selected as 'to', select as 'to'
     else if (!p2pConfig.toCard) {
         p2pConfig.toCard = card;
         cardItems[index].classList.add('selected');
@@ -181,6 +178,7 @@ async function registerP2P() {
     try {
         // Step 1: Register P2P
         statusEl.innerText = 'Регистрация перевода...';
+        console.log('🔄 Регистрация P2P...');
         
         var registerResponse = await fetch('/api/p2p?action=register', {
             method: 'POST',
@@ -196,6 +194,7 @@ async function registerP2P() {
         });
         
         var registerData = await registerResponse.json();
+        console.log('📦 Ответ регистрации:', registerData);
         
         if (!registerResponse.ok || registerData.error) {
             throw new Error(registerData.message || 'Ошибка регистрации');
@@ -205,6 +204,7 @@ async function registerP2P() {
         
         // Step 2: Perform P2P
         statusEl.innerText = 'Выполнение перевода...';
+        console.log('🔄 Выполнение P2P...');
         
         var performResponse = await fetch('/api/p2p?action=perform', {
             method: 'POST',
@@ -218,49 +218,29 @@ async function registerP2P() {
         });
         
         var performData = await performResponse.json();
+        console.log('📦 Ответ perform:', performData);
         
         if (!performResponse.ok || performData.error) {
             throw new Error(performData.message || 'Ошибка выполнения');
         }
         
-        // Проверяем есть ли 3DS редирект
-        if (performData.acsRedirect) {
-            // Открываем 3DS страницу
-            show3DSPage(performData.acsRedirect);
+        // Проверяем есть ли 3DS URL
+        if (performData.acsUrl) {
+            console.log('🔐 3DS URL найден, перенаправляем:', performData.acsUrl);
+            // Перенаправляем на 3DS страницу
+            window.location.href = performData.acsUrl;
         } else if (performData.redirect) {
-            // Обычный редирект (без 3DS)
+            console.log('➡️ Обычный редирект:', performData.redirect);
             window.location.href = performData.redirect;
         } else {
+            console.log('✅ Переход на страницу статуса');
             showStatusPage();
         }
         
     } catch (error) {
-        console.error('P2P error:', error);
+        console.error('❌ P2P error:', error);
         alert('Ошибка: ' + error.message);
         showScreen('screen-amount');
-    }
-}
-
-function show3DSPage(acsRedirect) {
-    showScreen('screen-3ds');
-    
-    // Устанавливаем src iframe
-    var iframe = document.getElementById('3ds-frame');
-    if (iframe) {
-        iframe.src = acsRedirect;
-    }
-    
-    // Сохраняем orderId для проверки после 3DS
-    sessionStorage.setItem('p2p_orderId', p2pConfig.orderId);
-    
-    // Проверяем завершение через 10 секунд
-    setTimeout(check3DSComplete, 10000);
-}
-
-function check3DSComplete() {
-    var orderId = sessionStorage.getItem('p2p_orderId');
-    if (orderId) {
-        showStatusPage();
     }
 }
 
