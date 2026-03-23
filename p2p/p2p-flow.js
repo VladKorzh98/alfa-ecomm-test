@@ -1,3 +1,35 @@
+// P2P Flow Logic
+var p2pConfig = {
+    type: '', // 'with-3ds' or 'without-3ds'
+    fromCard: null,
+    toCard: null,
+    cards: [],
+    amount: '',
+    currency: '933',
+    orderId: '',
+    orderNumber: ''
+};
+
+function showScreen(screenId) {
+    var screens = document.getElementsByClassName('screen');
+    for (var i = 0; i < screens.length; i++) {
+        screens[i].classList.remove('active');
+    }
+    var targetScreen = document.getElementById(screenId);
+    if (targetScreen) {
+        targetScreen.classList.add('active');
+    }
+}
+
+function selectP2PType(type) {
+    p2pConfig.type = type;
+    if (type === 'without-3ds') {
+        loadCards();
+    } else {
+        alert('P2P с 3DS будет реализован позже');
+    }
+}
+
 async function loadCards() {
     showScreen('screen-select-cards');
     var loader = document.getElementById('cards-loader');
@@ -55,6 +87,79 @@ async function loadCards() {
         errorDiv.innerText = error.message;
         errorDiv.classList.add('show');
         loader.style.display = 'none';
+    }
+}
+
+function selectCard(index) {
+    var cardItems = document.querySelectorAll('.card-item');
+    var card = p2pConfig.cards[index];
+    
+    // If card already selected as 'from', remove it
+    if (p2pConfig.fromCard && p2pConfig.fromCard.bindingId === card.bindingId) {
+        p2pConfig.fromCard = null;
+        cardItems[index].classList.remove('selected');
+        var label = cardItems[index].querySelector('.card-label.from');
+        if (label) label.remove();
+    }
+    // If card already selected as 'to', remove it
+    else if (p2pConfig.toCard && p2pConfig.toCard.bindingId === card.bindingId) {
+        p2pConfig.toCard = null;
+        cardItems[index].classList.remove('selected');
+        var label = cardItems[index].querySelector('.card-label.to');
+        if (label) label.remove();
+    }
+    // If no card selected as 'from', select as 'from'
+    else if (!p2pConfig.fromCard) {
+        p2pConfig.fromCard = card;
+        cardItems[index].classList.add('selected');
+        var label = document.createElement('span');
+        label.className = 'card-label from';
+        label.innerText = 'Списание';
+        cardItems[index].appendChild(label);
+    }
+    // If no card selected as 'to', select as 'to'
+    else if (!p2pConfig.toCard) {
+        p2pConfig.toCard = card;
+        cardItems[index].classList.add('selected');
+        var label = document.createElement('span');
+        label.className = 'card-label to';
+        label.innerText = 'Получение';
+        cardItems[index].appendChild(label);
+    }
+    
+    updateSelectionInfo();
+}
+
+function updateSelectionInfo() {
+    var fromEl = document.getElementById('selected-from');
+    var toEl = document.getElementById('selected-to');
+    var continueBtn = document.getElementById('continue-btn');
+    
+    if (fromEl) {
+        fromEl.innerText = p2pConfig.fromCard ? p2pConfig.fromCard.maskedPan : 'Не выбрана';
+    }
+    if (toEl) {
+        toEl.innerText = p2pConfig.toCard ? p2pConfig.toCard.maskedPan : 'Не выбрана';
+    }
+    if (continueBtn) {
+        continueBtn.disabled = !(p2pConfig.fromCard && p2pConfig.toCard);
+    }
+}
+
+function showAmountScreen() {
+    if (!p2pConfig.fromCard || !p2pConfig.toCard) {
+        alert('Выберите обе карты');
+        return;
+    }
+    showScreen('screen-amount');
+}
+
+function validateAmount(input) {
+    input.value = input.value.replace(/[^0-9.]/g, '');
+    var parts = input.value.split('.');
+    if (parts.length > 2) input.value = parts[0] + '.' + parts[1];
+    if (parts.length === 2 && parts[1].length > 2) {
+        input.value = parts[0] + '.' + parts[1].substring(0, 2);
     }
 }
 
@@ -129,6 +234,10 @@ async function registerP2P() {
         alert('Ошибка: ' + error.message);
         showScreen('screen-amount');
     }
+}
+
+function generateOrderNumber() {
+    return Math.floor(Math.random() * 100000).toString();
 }
 
 async function showStatusPage() {
