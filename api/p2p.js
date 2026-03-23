@@ -1,7 +1,7 @@
 export default async function handler(req, res) {
   const { action } = req.query;
 
-  // GET запросы (не используются, но оставляем для совместимости)
+  // GET запросы (не используются)
   if (req.method === 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -81,9 +81,10 @@ async function handleRegister(req, res) {
 
   const amountMinor = Math.round(parseFloat(amount) * 100);
   
-  // ИЗМЕНЕНО: Прямой путь на страницу статуса (как в ECOM)
-  const baseUrl = process.env.BASE_URL || '';
-  const returnUrl = baseUrl + '/p2p/status.html';
+  // ИСПОЛЬЗУЕМ ОТНОСИТЕЛЬНЫЙ ПУТЬ (как в ECOM)
+  const returnUrl = '/p2p/status.html';
+  
+  console.log('Return URL:', returnUrl);
 
   const requestBody = {
     username: process.env.ALFA_USERNAME || 'ABB_3-api',
@@ -91,7 +92,7 @@ async function handleRegister(req, res) {
     amount: amountMinor,
     currency: currency || '933',
     orderNumber: orderNumber,
-    returnUrl: returnUrl,
+    returnUrl: returnUrl,  // Относительный путь - банк сам подставит домен
     clientId: clientId,
     features: {
       feature: ['FORCE_SSL']
