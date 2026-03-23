@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Статус P2P перевода</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+
+        header {
+            background: white;
+            padding: 15px 40px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .brand-name {
+            font-weight: bold;
+            font-size: 20px;
+            color: #ef3124;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 50px auto;
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .breadcrumb {
+            margin-bottom: 20px;
+        }
+
+        .breadcrumb a {
+            color: #666;
+            text-decoration: none;
+        }
+
+        .breadcrumb a:hover {
+            color: #ef3124;
+        }
+
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #ef3124;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 40px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .result-box {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .result-row {
+            margin: 15px 0;
+            padding: 10px 0;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .result-row:last-child {
+            border-bottom: none;
+        }
+
+        .result-label {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .result-value {
+            color: #666;
+        }
+
+        .status-success {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .status-error {
+            color: #ef3124;
+            font-weight: bold;
+        }
+
+        .btn {
+            background: white;
+            color: #ef3124;
+            border: 2px solid #ef3124;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 20px;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: #ef3124;
+            color: white;
+        }
+
+        .error-message {
+            color: #ef3124;
+            text-align: center;
+            padding: 20px;
+            background: #f8d7da;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="brand-name">P2P Testing</div>
+    </header>
+
+    <div class="container">
+        <div class="breadcrumb">
+            <a href="../index.html">← На главную</a>
+        </div>
+
+        <h1>Статус P2P перевода</h1>
+
+        <div id="loader" class="loader"></div>
+
+        <div id="error" class="error-message" style="display:none"></div>
+
+        <div id="status-content" style="display:none">
+            <div class="result-box">
+                <div class="result-row">
+                    <span class="result-label">Статус:</span>
+                    <span class="result-value" id="st-status"></span>
+                </div>
+                <div class="result-row">
+                    <span class="result-label">Сумма:</span>
+                    <span class="result-value" id="st-amount"></span>
+                </div>
+                <div class="result-row">
+                    <span class="result-label">Валюта:</span>
+                    <span class="result-value" id="st-currency"></span>
+                </div>
+                <div class="result-row">
+                    <span class="result-label">RRN:</span>
+                    <span class="result-value" id="st-rrn"></span>
+                </div>
+                <div class="result-row">
+                    <span class="result-label">Карта списания:</span>
+                    <span class="result-value" id="st-from-card"></span>
+                </div>
+                <div class="result-row">
+                    <span class="result-label">Карта получателя:</span>
+                    <span class="result-value" id="st-to-card"></span>
+                </div>
+            </div>
+
+            <button class="btn" onclick="window.location.href='index.html'">Новый перевод</button>
+            <button class="btn" onclick="window.location.href='../index.html'" style="margin-top: 10px">На главную</button>
+        </div>
+    </div>
+
+    <script>
+        // Получаем orderId из URL параметров
+        var urlParams = new URLSearchParams(window.location.search);
+        var orderId = urlParams.get('orderId');
+
+        if (!orderId) {
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('error').innerText = 'Не указан orderId';
+            document.getElementById('error').style.display = 'block';
+        } else {
+            loadStatus(orderId);
+        }
+
+        async function loadStatus(orderId) {
+            try {
+                var response = await fetch('/api/p2p/status', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ orderId: orderId })
+                });
+
+                var data = await response.json();
+
+                document.getElementById('loader').style.display = 'none';
+
+                if (!response.ok || data.error) {
+                    throw new Error(data.message || 'Ошибка получения статуса');
+                }
+
+                // Отображаем статус
+                var statusEl = document.getElementById('st-status');
+                statusEl.innerText = data.status || 'Неизвестно';
+                
+                if (data.status === '0' || data.status === 0) {
+                    statusEl.className = 'result-value status-error';
+                } else if (data.status === '2' || data.status === 2) {
+                    statusEl.className = 'result-value status-success';
+                }
+
+                document.getElementById('st-amount').innerText = (parseFloat(data.amount) / 100).toFixed(2);
+                document.getElementById('st-currency').innerText = data.currency === '933' ? 'BYN' : data.currency;
+                document.getElementById('st-rrn').innerText = data.rrn || '-';
+                document.getElementById('st-from-card').innerText = data.fromCard?.maskedPan || '-';
+                document.getElementById('st-to-card').innerText = data.toCard?.maskedPan || '-';
+
+                document.getElementById('status-content').style.display = 'block';
+
+            } catch (error) {
+                console.error('Status error:', error);
+                document.getElementById('loader').style.display = 'none';
+                document.getElementById('error').innerText = 'Ошибка: ' + error.message;
+                document.getElementById('error').style.display = 'block';
+            }
+        }
+    </script>
+</body>
+</html>
