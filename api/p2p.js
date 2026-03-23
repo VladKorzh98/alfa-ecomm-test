@@ -1,9 +1,9 @@
 export default async function handler(req, res) {
   const { action } = req.query;
 
-  // GET запросы (return handler)
+  // GET запросы (не используются, но оставляем для совместимости)
   if (req.method === 'GET') {
-    return handleP2PReturn(req, res);
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   // POST запросы
@@ -25,45 +25,6 @@ export default async function handler(req, res) {
   }
 
   return res.status(405).json({ error: 'Method not allowed' });
-}
-
-// ===== GET: Return Handler =====
-async function handleP2PReturn(req, res) {
-  const { orderId, errorCode } = req.query;
-
-  console.log('=== P2P RETURN HANDLER ===');
-  console.log('orderId:', orderId);
-  console.log('errorCode:', errorCode);
-
-  if (errorCode && errorCode !== '0') {
-    return res.redirect(302, `/p2p/status.html?orderId=${orderId}&error=${errorCode}`);
-  }
-
-  if (!orderId) {
-    return res.status(400).json({ error: 'orderId not provided' });
-  }
-
-  try {
-    const statusParams = new URLSearchParams();
-    statusParams.append('userName', process.env.ALFA_USERNAME || 'ABB_3-api');
-    statusParams.append('password', process.env.ALFA_PASSWORD || 'ABB_3*?1');
-    statusParams.append('orderId', orderId);
-
-    const statusResponse = await fetch('https://abby.rbsuat.com/payment/rest/getP2PStatus.do', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: statusParams.toString()
-    });
-
-    const statusData = await statusResponse.json();
-    console.log('P2P Status:', statusData);
-
-    res.redirect(302, `/p2p/status.html?orderId=${orderId}`);
-
-  } catch (error) {
-    console.error('Return handler error:', error);
-    res.redirect(302, `/p2p/status.html?orderId=${orderId}&error=1`);
-  }
 }
 
 // ===== POST: Get Bindings =====
@@ -119,8 +80,10 @@ async function handleRegister(req, res) {
   console.log('clientId:', clientId);
 
   const amountMinor = Math.round(parseFloat(amount) * 100);
+  
+  // ИЗМЕНЕНО: Прямой путь на страницу статуса (как в ECOM)
   const baseUrl = process.env.BASE_URL || '';
-  const returnUrl = baseUrl + '/api/p2p?action=return';
+  const returnUrl = baseUrl + '/p2p/status.html';
 
   const requestBody = {
     username: process.env.ALFA_USERNAME || 'ABB_3-api',
