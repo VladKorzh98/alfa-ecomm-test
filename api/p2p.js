@@ -1,12 +1,10 @@
 export default async function handler(req, res) {
   const { action } = req.query;
 
-  // GET запросы (не используются)
   if (req.method === 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // POST запросы
   if (req.method === 'POST') {
     const { action } = req.body;
     
@@ -27,7 +25,6 @@ export default async function handler(req, res) {
   return res.status(405).json({ error: 'Method not allowed' });
 }
 
-// ===== POST: Get Bindings =====
 async function handleGetBindings(req, res) {
   const { clientId } = req.body;
 
@@ -69,7 +66,6 @@ async function handleGetBindings(req, res) {
   }
 }
 
-// ===== POST: Register P2P =====
 async function handleRegister(req, res) {
   const { amount, currency, orderNumber, clientId, use3DS } = req.body;
 
@@ -88,7 +84,6 @@ async function handleRegister(req, res) {
   
   console.log('Return URL:', returnUrl);
 
-  // Выбираем feature в зависимости от 3DS
   const feature = use3DS ? 'FORCE_TDS' : 'FORCE_SSL';
 
   const requestBody = {
@@ -130,7 +125,6 @@ async function handleRegister(req, res) {
   }
 }
 
-// ===== POST: Perform P2P =====
 async function handlePerform(req, res) {
   const { orderId, fromBindingId, toBindingId } = req.body;
 
@@ -167,7 +161,7 @@ async function handlePerform(req, res) {
 
     return res.status(200).json({
       redirect: data.redirect,
-      acsRedirect: data.acsRedirect,
+      acsUrl: data.acsUrl,  // <-- Возвращаем acsUrl для 3DS
       is3DSVer2: data.is3DSVer2
     });
 
@@ -177,7 +171,6 @@ async function handlePerform(req, res) {
   }
 }
 
-// ===== POST: Get P2P Status =====
 async function handleStatus(req, res) {
   const { orderId } = req.body;
 
