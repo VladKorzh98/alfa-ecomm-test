@@ -71,13 +71,14 @@ async function handleGetBindings(req, res) {
 
 // ===== POST: Register P2P =====
 async function handleRegister(req, res) {
-  const { amount, currency, orderNumber, clientId } = req.body;
+  const { amount, currency, orderNumber, clientId, use3DS } = req.body;
 
   console.log('=== P2P REGISTER ===');
   console.log('amount:', amount);
   console.log('currency:', currency);
   console.log('orderNumber:', orderNumber);
   console.log('clientId:', clientId);
+  console.log('use3DS:', use3DS);
 
   const amountMinor = Math.round(parseFloat(amount) * 100);
   
@@ -86,6 +87,9 @@ async function handleRegister(req, res) {
   const returnUrl = `${protocol}://${host}/p2p/status.html`;
   
   console.log('Return URL:', returnUrl);
+
+  // Выбираем feature в зависимости от 3DS
+  const feature = use3DS ? 'FORCE_TDS' : 'FORCE_SSL';
 
   const requestBody = {
     username: process.env.ALFA_USERNAME || 'ABB_3-api',
@@ -96,7 +100,7 @@ async function handleRegister(req, res) {
     returnUrl: returnUrl,
     clientId: clientId,
     features: {
-      feature: ['FORCE_SSL']
+      feature: [feature]
     }
   };
 
@@ -163,6 +167,7 @@ async function handlePerform(req, res) {
 
     return res.status(200).json({
       redirect: data.redirect,
+      acsRedirect: data.acsRedirect,
       is3DSVer2: data.is3DSVer2
     });
 
@@ -211,7 +216,7 @@ async function handleStatus(req, res) {
       panMaskedTo: data.panMaskedTo,
       operationList: data.operationList || [],
       creationDate: data.creationDate,
-      errorMessage: data.errorMessage || ''  // <-- Добавлено описание ошибки
+      errorMessage: data.errorMessage || ''
     });
 
   } catch (error) {
