@@ -98,11 +98,12 @@
             color: #666;
         }
 
-        .breadcrumb span {
-            cursor: pointer;
+        .breadcrumb a {
+            color: #666;
+            text-decoration: none;
         }
 
-        .breadcrumb span:hover {
+        .breadcrumb a:hover {
             color: #ef3124;
         }
 
@@ -118,6 +119,7 @@
             margin: 10px 0;
             cursor: pointer;
             transition: all 0.2s;
+            position: relative;
         }
 
         .card-item:hover {
@@ -241,20 +243,20 @@
 
     <div class="container">
         <div class="breadcrumb">
-            <span onclick="window.location.href='../index.html'">← На главную</span>
+            <a href="../index.html">← На главную</a>
         </div>
 
         <!-- Screen 1: Main P2P Menu -->
         <div id="screen-p2p-main" class="screen active">
             <h1>P2P операции</h1>
             <p>Переводы между картами</p>
-            <button class="btn" onclick="showScreen('screen-p2p-type')">P2P (связка→связка)</button>
+            <button class="btn" onclick="selectP2PType('without-3ds')">P2P (связка→связка)</button>
         </div>
 
         <!-- Screen 2: Choose 3DS or No 3DS -->
         <div id="screen-p2p-type" class="screen">
             <div class="breadcrumb">
-                <span onclick="showScreen('screen-p2p-main')">← Назад</span>
+                <a href="#" onclick="showScreen('screen-p2p-main'); return false;">← Назад</a>
             </div>
             <h1>Тип P2P перевода</h1>
             <p>Выберите тип аутентификации:</p>
@@ -265,7 +267,7 @@
         <!-- Screen 3: Select Cards (for No 3DS) -->
         <div id="screen-select-cards" class="screen">
             <div class="breadcrumb">
-                <span onclick="showScreen('screen-p2p-type')">← Назад</span>
+                <a href="#" onclick="showScreen('screen-p2p-type'); return false;">← Назад</a>
             </div>
             <h1>Выберите карты</h1>
             <p>Выберите карту списания и карту получателя:</p>
@@ -288,7 +290,7 @@
         <!-- Screen 4: Enter Amount -->
         <div id="screen-amount" class="screen">
             <div class="breadcrumb">
-                <span onclick="showScreen('screen-select-cards')">← Назад</span>
+                <a href="#" onclick="showScreen('screen-select-cards'); return false;">← Назад</a>
             </div>
             <h1>Сумма перевода</h1>
             
@@ -318,7 +320,7 @@
         <!-- Screen 6: Status -->
         <div id="screen-status" class="screen">
             <div class="breadcrumb">
-                <span onclick="window.location.href='../index.html'">← На главную</span>
+                <a href="../index.html">← На главную</a>
             </div>
             <h1>Статус P2P перевода</h1>
             
