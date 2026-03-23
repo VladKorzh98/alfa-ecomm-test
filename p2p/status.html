@@ -181,9 +181,9 @@
         // Получаем orderId из URL параметров
         var urlParams = new URLSearchParams(window.location.search);
         var orderId = urlParams.get('orderId');
-        var errorCode = urlParams.get('error');
+        var errorCode = urlParams.get('errorCode');
 
-        if (errorCode) {
+        if (errorCode && errorCode !== '0') {
             document.getElementById('loader').style.display = 'none';
             document.getElementById('error').innerText = 'Произошла ошибка при обработке платежа (код: ' + errorCode + ')';
             document.getElementById('error').style.display = 'block';
@@ -197,10 +197,13 @@
 
         async function loadStatus(orderId) {
             try {
-                var response = await fetch('/api/p2p/status', {
+                var response = await fetch('/api/p2p?action=status', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ orderId: orderId })
+                    body: JSON.stringify({
+                        action: 'status',
+                        orderId: orderId
+                    })
                 });
 
                 var data = await response.json();
