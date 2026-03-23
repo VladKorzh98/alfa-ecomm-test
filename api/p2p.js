@@ -1,12 +1,10 @@
 export default async function handler(req, res) {
   const { action } = req.query;
 
-  // GET запросы (не используются)
   if (req.method === 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // POST запросы
   if (req.method === 'POST') {
     const { action } = req.body;
     
@@ -81,10 +79,9 @@ async function handleRegister(req, res) {
 
   const amountMinor = Math.round(parseFloat(amount) * 100);
   
-  // ИСПОЛЬЗУЕМ ТАКОЙ ЖЕ ПОДХОД КАК В ECOM:
   const host = req.headers.host || process.env.VERCEL_URL || 'localhost';
   const protocol = process.env.VERCEL_ENV === 'production' ? 'https' : 'http';
-  const returnUrl = `${protocol}://${host}/p2p/status.html`;  // Полный URL!
+  const returnUrl = `${protocol}://${host}/p2p/status.html`;
   
   console.log('Return URL:', returnUrl);
 
@@ -94,7 +91,7 @@ async function handleRegister(req, res) {
     amount: amountMinor,
     currency: currency || '933',
     orderNumber: orderNumber,
-    returnUrl: returnUrl,  // Полный URL с доменом
+    returnUrl: returnUrl,
     clientId: clientId,
     features: {
       feature: ['FORCE_SSL']
@@ -180,20 +177,27 @@ async function handleStatus(req, res) {
   console.log('=== GET P2P STATUS ===');
   console.log('orderId:', orderId);
 
-  const params = new URLSearchParams();
-  params.append('userName', process.env.ALFA_USERNAME || 'ABB_3-api');
-  params.append('password', process.env.ALFA_PASSWORD || 'ABB_3*?1');
-  params.append('orderId', orderId);
+  const requestBody = {
+    username: process.env.ALFA_USERNAME || 'ABB_3-api',
+    password: process.env.ALFA_PASSWORD || 'ABB_3*?1',
+    orderId: orderId
+  };
 
   try {
-    const response = await fetch('https://abby.rbsuat.com/payment/rest/getP2PStatus.do', {
+    const response = await fetch('https://abby.rbsuat.com/payment/rest/api/p2p/getP2PStatus.do', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: params.toString()
+      headers: { 
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(requestBody)
     });
 
     const data = await response.json();
     console.log('P2P Status response:', data);
+
+    if (data.errorCode !== 0 || data.error) {
+      throw new Error(data.errorMessage || 'Ошибка получения статуса');
+    }
 
     return res.status(200).json({
       status: data.status,
