@@ -181,8 +181,13 @@
         // Получаем orderId из URL параметров
         var urlParams = new URLSearchParams(window.location.search);
         var orderId = urlParams.get('orderId');
+        var errorCode = urlParams.get('error');
 
-        if (!orderId) {
+        if (errorCode) {
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('error').innerText = 'Произошла ошибка при обработке платежа (код: ' + errorCode + ')';
+            document.getElementById('error').style.display = 'block';
+        } else if (!orderId) {
             document.getElementById('loader').style.display = 'none';
             document.getElementById('error').innerText = 'Не указан orderId';
             document.getElementById('error').style.display = 'block';
@@ -208,12 +213,15 @@
 
                 // Отображаем статус
                 var statusEl = document.getElementById('st-status');
-                statusEl.innerText = data.status || 'Неизвестно';
+                var statusText = getStatusText(data.status);
+                statusEl.innerText = statusText;
                 
                 if (data.status === '0' || data.status === 0) {
                     statusEl.className = 'result-value status-error';
                 } else if (data.status === '2' || data.status === 2) {
                     statusEl.className = 'result-value status-success';
+                } else {
+                    statusEl.className = 'result-value';
                 }
 
                 document.getElementById('st-amount').innerText = (parseFloat(data.amount) / 100).toFixed(2);
@@ -230,6 +238,21 @@
                 document.getElementById('error').innerText = 'Ошибка: ' + error.message;
                 document.getElementById('error').style.display = 'block';
             }
+        }
+
+        function getStatusText(statusCode) {
+            var statusMap = {
+                '0': 'Заказ зарегистрирован, не оплачен',
+                '1': 'Заказ подтвержден',
+                '2': 'Заказ завершен',
+                '3': 'Отменен',
+                '4': 'Возврат',
+                '5': '3DS проверка',
+                '6': 'Отклонен',
+                '7': 'Ожидает оплаты',
+                '8': 'Частичное завершение'
+            };
+            return statusMap[statusCode] || 'Неизвестный статус (' + statusCode + ')';
         }
     </script>
 </body>
